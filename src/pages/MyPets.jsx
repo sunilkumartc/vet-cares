@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Heart, PawPrint, Plus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -185,7 +184,7 @@ export default function MyPets() {
                 className="bg-white/50 hover:bg-white border-pink-200 text-pink-600"
               >
                 <Plus className="w-4 h-4 mr-2" />
-                Add New TenantPet
+                Add New Pet
               </Button>
             </div>
           </div>

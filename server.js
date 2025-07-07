@@ -79,23 +79,19 @@ function buildTenantQuery(tenantId, filters = {}) {
 // Get current tenant
 app.get('/api/tenant/current', async (req, res) => {
   try {
-    const host = req.headers.host;
+    const host = req.headers.host; // e.g., 'clinic3.localhost:8090'
+    const hostWithoutPort = host.split(':')[0]; // 'clinic3.localhost'
     let slug = 'default';
-    
-    if (host.includes('localhost') || host.includes('127.0.0.1')) {
-      const parts = host.split('.');
-      if (parts.length > 1) {
-        slug = parts[0];
-      } else {
-        // If it's just localhost without subdomain, use 'default'
-        slug = 'default';
-      }
+
+    const parts = hostWithoutPort.split('.');
+    if (parts.length > 1 && parts[0] !== 'localhost' && parts[0] !== '127') {
+      slug = parts[0];
     } else {
-      const parts = host.split('.');
-      if (parts.length >= 2) {
-        slug = parts[0];
-      }
+      slug = 'default';
     }
+
+    // Debug log for domain/subdomain extraction
+    console.log('[TENANT DEBUG] Host header:', host, '| hostWithoutPort:', hostWithoutPort, '| slug:', slug);
     
     const collection = db.collection('tenants');
     

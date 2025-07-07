@@ -102,16 +102,16 @@ export default function CustomerPetForm({ pet, onSubmit, onCancel }) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-gray-800">
           <PawPrint className="w-6 h-6 text-pink-500" />
-          {pet ? 'Edit TenantPet Profile' : 'Tell us about your new pet'}
+          {pet ? 'Edit Pet Profile' : 'Register New Pet'}
         </CardTitle>
       </CardHeader>
       <CardContent className="p-6">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-               {/* TenantPet Name & Species */}
+               {/* Pet Name & Species */}
               <div className="space-y-2">
-                <Label htmlFor="name">TenantPet Name *</Label>
+                <Label htmlFor="name">Pet Name *</Label>
                 <Input id="name" value={formData.name} onChange={(e) => handleChange('name', e.target.value)} required placeholder="e.g., Buddy" />
               </div>
               <div className="space-y-2">
@@ -121,9 +121,9 @@ export default function CustomerPetForm({ pet, onSubmit, onCancel }) {
                   <SelectContent>{speciesOptions.map(s => <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              {/* TenantPet ID & Breed */}
+              {/* Pet ID & Breed */}
               <div className="space-y-2">
-                <Label htmlFor="pet_id">TenantPet ID</Label>
+                <Label htmlFor="pet_id">Pet ID</Label>
                 <div className="flex gap-2">
                   <Input id="pet_id" value={formData.pet_id} readOnly placeholder="Auto-generated" className="font-mono bg-gray-100" />
                   {!pet && formData.species && (<Button type="button" variant="outline" size="icon" onClick={() => generateNewPetId(formData.species)} disabled={generatingId} title="Regenerate"><RefreshCw className={`w-4 h-4 ${generatingId ? 'animate-spin' : ''}`} /></Button>)}
@@ -136,10 +136,10 @@ export default function CustomerPetForm({ pet, onSubmit, onCancel }) {
             </div>
             {/* Photo Uploader */}
             <div className="space-y-2 flex flex-col items-center justify-center bg-gray-50 rounded-lg p-4">
-              <Label>TenantPet Photo</Label>
+              <Label>Pet Photo</Label>
               <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden mb-2">
                 {currentImage ? (
-                  <img src={currentImage} alt="TenantPet" className="w-full h-full object-cover" />
+                  <img src={currentImage} alt="Pet" className="w-full h-full object-cover" />
                 ) : (
                   <PawPrint className="w-12 h-12 text-gray-400" />
                 )}
@@ -191,7 +191,7 @@ export default function CustomerPetForm({ pet, onSubmit, onCancel }) {
               Cancel
             </Button>
             <Button type="submit" className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white" disabled={uploading}>
-              {uploading ? <>Saving...</> : <><Save className="w-4 h-4 mr-2" /> {pet ? 'Update TenantPet' : 'Save TenantPet'}</>}
+              {uploading ? <>Saving...</> : <><Save className="w-4 h-4 mr-2" /> {pet ? 'Update Pet' : 'Save Pet'}</>}
             </Button>
           </div>
         </form>

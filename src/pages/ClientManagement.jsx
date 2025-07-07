@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { format, differenceInYears, addDays, intervalToDuration } from "date-fns";
 import { Plus, Search, Users, Phone, Mail, MapPin, PawPrint, FileText, Syringe, CreditCard, Calendar, Eye, Edit, ArrowRight, X, Maximize2, Menu, DollarSign, StickyNote, PlusCircle } from "lucide-react";
@@ -459,7 +458,7 @@ export default function ClientManagement() {
     setSelectedClient(null);
     setIsFullScreen(false);
     setSelectedPetId(null); // Reset pet filter on close
-    // Navigate to Dashboard instead of staying on TenantClient Management
+    // Navigate to Dashboard instead of staying on Client Management
     navigate(createPageUrl('Dashboard'));
   };
 
@@ -605,7 +604,7 @@ export default function ClientManagement() {
                   className="bg-purple-500/80 text-white border-purple-300/50 hover:bg-purple-500/100 transition-colors"
                 >
                   <Edit className="w-4 h-4 mr-2" />
-                  Edit TenantClient
+                  Edit Client
                 </Button>
               </div>
             </div>
@@ -724,7 +723,7 @@ export default function ClientManagement() {
                         )}
                         {overdueVaccinations.length > 0 && (
                           <Badge variant="destructive" className="text-xs">
-                            {overdueVaccinations.length} Overdue TenantVaccine{overdueVaccinations.length > 1 ? 's' : ''}
+                            {overdueVaccinations.length} Overdue Vaccine{overdueVaccinations.length > 1 ? 's' : ''}
                           </Badge>
                         )}
                       </div>
@@ -733,11 +732,11 @@ export default function ClientManagement() {
                 );
               })}
 
-              {/* Add New TenantPet Card */}
+              {/* Add New Pet Card */}
               <Card className="border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors cursor-pointer" onClick={() => { setSelectedPetId(null); setShowForm('pet'); setEditingRecord(null); }}>
                 <CardContent className="flex flex-col items-center justify-center h-full text-gray-500 hover:text-blue-600">
                   <Plus className="w-8 h-8 mb-2" />
-                  <span className="font-medium">Add New TenantPet</span>
+                  <span className="font-medium">Add New Pet</span>
                 </CardContent>
               </Card>
             </div>
@@ -1107,7 +1106,7 @@ export default function ClientManagement() {
     <div className="p-4 md:p-8 space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">TenantClient Management</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Client Management</h1>
           <p className="text-gray-600 mt-1">Search and manage client records with their pets and medical history</p>
         </div>
       </div>
@@ -1163,7 +1162,7 @@ export default function ClientManagement() {
           <Search className="w-12 h-12 mx-auto mb-4 text-blue-500" />
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Use Global Search</h3>
           <p className="text-gray-600">
-            Click the "Search TenantClient/Patient" button in the top navigation bar to find and access client records quickly.
+            Click the "Search Client/Patient" button in the top navigation bar to find and access client records quickly.
           </p>
         </CardContent>
       </Card>

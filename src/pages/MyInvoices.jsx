@@ -79,7 +79,7 @@ export default function MyInvoices() {
             <CreditCard className="w-8 h-8 text-yellow-500" />
             Billing & Invoices
           </h1>
-          <p className="text-gray-600 mt-1">Your payment history with Dr Ravi TenantPet Portal.</p>
+          <p className="text-gray-600 mt-1">Your payment history with {window?.portalName || 'the portal'}.</p>
         </div>
 
         {invoices.length === 0 ? (

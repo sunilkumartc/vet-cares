@@ -168,7 +168,7 @@ export default function StaffDashboard() {
                   <Button variant="outline" className="w-full justify-start gap-2 h-auto py-4">
                     <Users className="w-5 h-5" />
                     <div className="text-left">
-                      <div className="font-medium">TenantClient Management</div>
+                      <div className="font-medium">Client Management</div>
                       <div className="text-sm text-gray-500">Add and update clients</div>
                     </div>
                   </Button>

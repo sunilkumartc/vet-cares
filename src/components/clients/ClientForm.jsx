@@ -31,7 +31,7 @@ export default function ClientForm({ client, onSubmit, onCancel }) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Users className="w-5 h-5 text-blue-600" />
-          {client ? 'Edit TenantClient' : 'Add New TenantClient'}
+          {client ? 'Edit Client' : 'Add New Client'}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -116,7 +116,7 @@ export default function ClientForm({ client, onSubmit, onCancel }) {
             </Button>
             <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
               <Save className="w-4 h-4 mr-2" />
-              {client ? 'Update TenantClient' : 'Add TenantClient'}
+              {client ? 'Update Client' : 'Add Client'}
             </Button>
           </div>
         </form>

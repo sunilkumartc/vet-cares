@@ -1,5 +1,3 @@
-
-
 import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -35,9 +33,9 @@ const adminNavigation = [
 ];
 
 const settingsNavigation = [
-  { title: "TenantClient Management", url: createPageUrl("Clients"), icon: Users },
-  { title: "TenantPet Management", url: createPageUrl("Pets"), icon: PawPrint },
-  { title: "TenantVaccine Settings", url: createPageUrl("VaccineSettings"), icon: Syringe },
+  { title: "Client Management", url: createPageUrl("Clients"), icon: Users },
+  { title: "Pet Management", url: createPageUrl("Pets"), icon: PawPrint },
+  { title: "Vaccine Settings", url: createPageUrl("VaccineSettings"), icon: Syringe },
   { title: "Report Templates", url: createPageUrl("ReportTemplates"), icon: FileSliders },
 ];
 
@@ -152,7 +150,7 @@ export default function Layout({ children, currentPageName }) {
       await TenantClient.create(clientData);
       setShowClientForm(false);
       await loadSearchData();
-      alert("TenantClient added successfully!");
+      alert("Client added successfully!");
     } catch (error) {
       console.error("Error creating new client from layout:", error);
       alert("Failed to add client. Please try again.");
@@ -263,7 +261,7 @@ export default function Layout({ children, currentPageName }) {
                       <Heart className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                      <h2 className="text-base font-bold text-gray-800">Dr Ravi TenantPet Portal</h2>
+                      <h2 className="text-base font-bold text-gray-800">{window?.portalName || 'Clinic Portal'}</h2>
                       <p className="text-xs text-gray-500">Staff Portal</p>
                   </div>
                 </div>
@@ -345,7 +343,7 @@ export default function Layout({ children, currentPageName }) {
                       className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-green-50 text-green-700 hover:bg-green-100 border border-green-200"
                     >
                       <Search className="w-4 h-4 text-green-600" />
-                      <span>Search TenantClient/Patient</span>
+                      <span>Search Client/Patient</span>
                     </button>
                     
                     <button
@@ -353,7 +351,7 @@ export default function Layout({ children, currentPageName }) {
                       className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200"
                     >
                       <Plus className="w-4 h-4 text-purple-600" />
-                      <span>Add New TenantClient</span>
+                      <span>Add New Client</span>
                     </button>
                   </div>
                   

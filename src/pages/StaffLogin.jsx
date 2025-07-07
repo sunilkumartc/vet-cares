@@ -32,7 +32,7 @@ export default function StaffLogin() {
       console.log("Attempting staff login...");
       
       // Use the backend API endpoint for authentication
-      const response = await fetch('http://localhost:3001/api/staff/login', {
+      const response = await fetch('/api/staff/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

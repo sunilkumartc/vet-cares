@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -233,7 +232,7 @@ export default function VaccinationForm({ vaccination, pets, clients, veterinari
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="vaccine_name">TenantVaccine Name *</Label>
+              <Label htmlFor="vaccine_name">Vaccine Name *</Label>
               <Select onValueChange={handleVaccineSelect} value={formData.vaccine_name} required>
                 <SelectTrigger>
                   <SelectValue placeholder="Select vaccine" />
@@ -255,7 +254,7 @@ export default function VaccinationForm({ vaccination, pets, clients, veterinari
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="vaccine_type">TenantVaccine Type</Label>
+              <Label htmlFor="vaccine_type">Vaccine Type</Label>
               <Select onValueChange={(value) => handleChange('vaccine_type', value)} value={formData.vaccine_type}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select type" />
@@ -301,7 +300,7 @@ export default function VaccinationForm({ vaccination, pets, clients, veterinari
                 id="batch_number"
                 value={formData.batch_number}
                 onChange={(e) => handleChange('batch_number', e.target.value)}
-                placeholder="TenantVaccine batch number"
+                placeholder="Vaccine batch number"
               />
             </div>
             <div className="space-y-2">

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -203,7 +202,7 @@ export default function VirtualChat() {
                 </div>
                 <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
                   <Heart className="w-3 h-3" />
-                  Powered by Dr Ravi TenantPet Portal AI
+                  Powered by {(window?.portalName || 'the portal') + ' AI'}
                 </p>
               </div>
             </CardContent>

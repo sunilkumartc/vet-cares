@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Search, Users, Phone, Mail, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -126,7 +125,7 @@ export default function Clients() {
     <div className="p-4 md:p-8 space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">TenantClient Management</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Client Management</h1>
           <p className="text-gray-600 mt-1">Manage your pet owners and their contact information</p>
         </div>
       </div>

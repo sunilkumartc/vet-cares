@@ -25,7 +25,7 @@ export default function SystemAdminGuard({ children }) {
       }
 
       // Verify token with server
-      const response = await fetch("http://localhost:3001/api/admin/verify", {
+      const response = await fetch("/api/admin/verify", {
         method: "GET",
         headers: {
           "Authorization": `Bearer ${token}`,

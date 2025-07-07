@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Calendar, Users, PawPrint, DollarSign, TrendingUp, Plus, Syringe } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -115,7 +114,7 @@ export default function Dashboard() {
             <Link to={createPageUrl("Appointments")}>
               <Button className="bg-blue-600 hover:bg-blue-700 gap-2">
                 <Plus className="w-4 h-4" />
-                New TenantAppointment
+                New Appointment
               </Button>
             </Link>
         </div>
@@ -193,7 +192,7 @@ export default function Dashboard() {
               <Button variant="outline" className="w-full justify-start gap-2 h-auto py-4">
                 <Users className="w-5 h-5" />
                 <div className="text-left">
-                  <div className="font-medium">Add New TenantClient</div>
+                  <div className="font-medium">Add New Client</div>
                   <div className="text-sm text-gray-500">Register a new pet owner</div>
                 </div>
               </Button>

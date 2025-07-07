@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -59,7 +58,7 @@ export default function AppointmentForm({ appointment, pets, clients, onSubmit, 
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <CalendarIcon className="w-5 h-5 text-blue-600" />
-          {appointment ? 'Edit TenantAppointment' : 'Schedule New TenantAppointment'}
+          {appointment ? 'Edit Appointment' : 'Schedule New Appointment'}
         </CardTitle>
       </CardHeader>
       <CardContent>

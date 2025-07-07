@@ -39,7 +39,7 @@ const rolePermissions = {
     color: "text-green-600 bg-green-100",
     permissions: [
       "TenantAppointment scheduling",
-      "TenantClient management",
+      "Client management",
       "Basic billing operations",
       "Phone support",
       "Check-in/Check-out",

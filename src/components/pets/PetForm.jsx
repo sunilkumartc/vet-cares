@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -102,15 +101,15 @@ export default function PetForm({ pet, clients, onSubmit, onCancel }) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <PawPrint className="w-5 h-5 text-blue-600" />
-          {pet ? 'Edit TenantPet Profile' : 'Register New TenantPet'}
+          {pet ? 'Edit Pet Profile' : 'Register New Pet'}
         </CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* TenantPet ID and Owner */}
+          {/* Pet ID and Owner */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="client_id">TenantPet Owner *</Label>
+              <Label htmlFor="client_id">Pet Owner *</Label>
               <Combobox
                 options={clients.map(client => ({ value: client.id, label: `${client.first_name} ${client.last_name}` }))}
                 value={formData.client_id}
@@ -121,7 +120,7 @@ export default function PetForm({ pet, clients, onSubmit, onCancel }) {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="pet_id">TenantPet ID</Label>
+              <Label htmlFor="pet_id">Pet ID</Label>
               <div className="flex gap-2">
                 <Input
                   id="pet_id"
@@ -138,7 +137,7 @@ export default function PetForm({ pet, clients, onSubmit, onCancel }) {
                     size="icon"
                     onClick={() => generateNewPetId(formData.species)}
                     disabled={generatingId}
-                    title="Regenerate TenantPet ID"
+                    title="Regenerate Pet ID"
                   >
                     <RefreshCw className={`w-4 h-4 ${generatingId ? 'animate-spin' : ''}`} />
                   </Button>
@@ -153,7 +152,7 @@ export default function PetForm({ pet, clients, onSubmit, onCancel }) {
           {/* Basic Information (now name and species) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="name">TenantPet Name *</Label>
+              <Label htmlFor="name">Pet Name *</Label>
               <Input id="name" value={formData.name} onChange={(e) => handleChange('name', e.target.value)} required />
             </div>
             <div className="space-y-2">
@@ -289,7 +288,7 @@ export default function PetForm({ pet, clients, onSubmit, onCancel }) {
             </Button>
             <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
               <Save className="w-4 h-4 mr-2" />
-              {pet ? 'Update TenantPet' : 'Register TenantPet'}
+              {pet ? 'Update Pet' : 'Register Pet'}
             </Button>
           </div>
         </form>

@@ -127,14 +127,14 @@ export default function VaccineManagement() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Syringe className="w-5 h-5 text-green-600" />
-            {editingVaccine ? 'Edit TenantVaccine' : 'Add New TenantVaccine'}
+            {editingVaccine ? 'Edit Vaccine' : 'Add New Vaccine'}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="name">TenantVaccine Name *</Label>
+                <Label htmlFor="name">Vaccine Name *</Label>
                 <Input
                   id="name"
                   value={formData.name}
@@ -144,7 +144,7 @@ export default function VaccineManagement() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="vaccine_type">TenantVaccine Type</Label>
+                <Label htmlFor="vaccine_type">Vaccine Type</Label>
                 <Select
                   value={formData.vaccine_type}
                   onValueChange={(value) => setFormData({...formData, vaccine_type: value})}
@@ -230,7 +230,7 @@ export default function VaccineManagement() {
               </Button>
               <Button type="submit" className="bg-green-600 hover:bg-green-700">
                 <Save className="w-4 h-4 mr-2" />
-                {editingVaccine ? 'Update TenantVaccine' : 'Add TenantVaccine'}
+                {editingVaccine ? 'Update Vaccine' : 'Add Vaccine'}
               </Button>
             </div>
           </form>
@@ -243,12 +243,12 @@ export default function VaccineManagement() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">TenantVaccine Management</h2>
+          <h2 className="text-2xl font-bold text-gray-900">Vaccine Management</h2>
           <p className="text-gray-600 mt-1">Manage available vaccines for your clinic</p>
         </div>
         <Button onClick={() => setShowForm(true)} className="bg-green-600 hover:bg-green-700">
           <Plus className="w-4 h-4 mr-2" />
-          Add New TenantVaccine
+          Add New Vaccine
         </Button>
       </div>
 
