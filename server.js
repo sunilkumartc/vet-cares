@@ -3,6 +3,7 @@ import cors from 'cors';
 import { MongoClient, ObjectId } from 'mongodb';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fetch from 'node-fetch';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -985,6 +986,61 @@ app.post('/api/admin/logout', async (req, res) => {
   } catch (error) {
     console.error('Logout error:', error);
     res.status(500).json({ message: 'Logout failed' });
+  }
+});
+
+// Vaccination Reminder API
+app.post('/api/vaccination/reminder', async (req, res) => {
+  try {
+    const {
+      phone_number_id,
+      customer_country_code,
+      customer_number,
+      customer_name,
+      pet_name,
+      vaccine_name,
+      due_date,
+      myop_ref_id
+    } = req.body;
+
+    // Prepare MyOperator API payload
+    const payload = {
+      phone_number_id,
+      customer_country_code,
+      customer_number,
+      data: {
+        type: "template",
+        context: {
+          template_name: "vaccination_reminder",
+          language: "en",
+          body: {
+            "1": customer_name, // {{1}}
+            "2": pet_name,      // {{2}}
+            "3": vaccine_name,  // {{3}}
+            "4": due_date       // {{4}}
+          }
+        }
+      },
+      reply_to: null,
+      myop_ref_id: myop_ref_id || `${customer_number}_${Date.now()}`
+    };
+
+    // Call MyOperator API
+    const response = await fetch('https://publicapi.myoperator.co/chat/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer bQBVcdNzGPIThEhPCRtKqISb0c7OrQnE5kVmvfqrfl',
+        'X-MYOP-COMPANY-ID': '685ef0684b5ee840'
+      },
+      body: JSON.stringify(payload)
+    });
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    console.error('Error sending vaccination reminder:', error);
+    res.status(500).json({ error: 'Failed to send vaccination reminder', details: error.message });
   }
 });
 
