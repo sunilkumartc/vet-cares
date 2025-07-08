@@ -103,7 +103,7 @@ export default function Appointments() {
     const pet = pets.find(p => p.id === appointment.pet_id);
     const client = clients.find(c => c.id === appointment.client_id);
     
-    const confirmMessage = `Are you sure you want to delete this appointment?\n\nDetails:\n• TenantPet: ${pet?.name || 'Unknown'}\n• TenantClient: ${client ? `${client.first_name} ${client.last_name}` : 'Unknown'}\n• Date: ${format(new Date(appointment.appointment_date), 'EEEE, MMM d, yyyy')}\n• Time: ${appointment.appointment_time}\n• Service: ${appointment.service_type?.replace(/_/g, ' ')}\n\nThis action cannot be undone.`;
+    const confirmMessage = `Are you sure you want to delete this appointment?\n\nDetails:\n• Pet Name: ${pet?.name || 'Unknown'}\n• Client Name: ${client ? `${client.first_name} ${client.last_name}` : 'Unknown'}\n• Date: ${format(new Date(appointment.appointment_date), 'EEEE, MMM d, yyyy')}\n• Time: ${appointment.appointment_time}`;
     
     if (confirm(confirmMessage)) {
       try {

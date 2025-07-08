@@ -106,9 +106,9 @@ const AppointmentCalendar = ({ appointments, pets, clients }) => {
                           text-xs px-1 py-0.5 rounded text-white truncate
                           ${statusColors[apt.status] || statusColors.scheduled}
                         `}
-                        title={`${apt.appointment_time} - ${pet?.name || 'Unknown TenantPet'}`}
+                        title={`${apt.appointment_time} - ${pet?.name || 'Unknown Pet Name'}`}
                       >
-                        {apt.appointment_time} - {pet?.name || 'TenantPet'}
+                        {apt.appointment_time} - {pet?.name || 'Pet Name'}
                       </div>
                     );
                   })}
@@ -160,11 +160,11 @@ const AppointmentCalendar = ({ appointments, pets, clients }) => {
                            <div className="border-l pl-4 flex-1">
                                 <p className="font-semibold text-base flex items-center gap-2">
                                     <PawPrint className="w-4 h-4 text-blue-500" />
-                                    <span>{pet?.name || 'Unknown TenantPet'}</span>
+                                    <span>{pet?.name || 'Unknown Pet Name'}</span>
                                 </p>
                                 <p className="text-sm text-gray-600 flex items-center gap-2 mt-1">
                                     <User className="w-4 h-4 text-green-500" />
-                                    <span>{client ? `${client.first_name} ${client.last_name}` : 'Unknown TenantClient'}</span>
+                                    <span>{client ? `${client.first_name} ${client.last_name}` : 'Unknown Client Name'}</span>
                                 </p>
                                 <p className="text-xs text-gray-500 mt-2 italic">{apt.reason || apt.service_type}</p>
                            </div>

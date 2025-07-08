@@ -100,7 +100,7 @@ export default function AppointmentBookingForm({ pets, selectedPet, onSuccess, o
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="pet_id">{pets.length > 0 ? 'Select TenantPet' : 'TenantPet Name'} *</Label>
+              <Label htmlFor="pet_id">{pets.length > 0 ? 'Select Pet Name' : 'Pet Name'} *</Label>
               {pets.length > 0 ? (
                 <Select onValueChange={(value) => handleChange('pet_id', value)} value={formData.pet_id} required>
                   <SelectTrigger id="pet_id">

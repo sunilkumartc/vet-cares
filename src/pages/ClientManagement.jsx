@@ -841,7 +841,7 @@ export default function ClientManagement() {
                         if (event.type === 'vaccine') {
                           const isOverdue = new Date(event.next_due_date) < new Date();
                           return (
-                            <TimelineEvent key={`hist-vac-${event.id}`} date={event.date} icon={Syringe} color="purple" title={`TenantVaccination for ${pet?.name}`}>
+                            <TimelineEvent key={`hist-vac-${event.id}`} date={event.date} icon={Syringe} color="purple" title={`Vaccination for ${pet?.name}`}>
                               <p className="font-medium">{event.vaccine_name}</p>
                               <p className={`text-sm ${isOverdue ? 'text-red-600 font-bold' : 'text-gray-600'}`}>
                                 Next due on {format(new Date(event.next_due_date), 'MMM d, yyyy')}

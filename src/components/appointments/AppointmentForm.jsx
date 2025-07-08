@@ -65,7 +65,7 @@ export default function AppointmentForm({ appointment, pets, clients, onSubmit, 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="client_id">TenantClient *</Label>
+              <Label htmlFor="client_id">Client Name *</Label>
               <Combobox
                 options={clients.map(c => ({ value: c.id, label: `${c.first_name} ${c.last_name}` }))}
                 value={formData.client_id}
@@ -76,7 +76,7 @@ export default function AppointmentForm({ appointment, pets, clients, onSubmit, 
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="pet_id">TenantPet *</Label>
+              <Label htmlFor="pet_id">Pet Name *</Label>
               <Combobox
                 options={availablePets.map(p => ({ value: p.id, label: p.name }))}
                 value={formData.pet_id}
