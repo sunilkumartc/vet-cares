@@ -18,7 +18,9 @@
     "test:tenant:default": "curl -s -H \"Host: localhost:3001\" http://localhost:3001/api/tenant/current | jq .",
     "test:tenant:test": "curl -s -H \"Host: test.localhost:3001\" http://localhost:3001/api/tenant/current | jq .",
     "vaccination-reminders": "node scripts/run-vaccination-reminders.js",
-    "setup:test-vaccination": "node scripts/setup-test-vaccination-data.js"
+    "setup:test-vaccination": "node scripts/setup-test-vaccination-data.js",
+    "setup:elasticsearch": "node scripts/setup-elasticsearch.js",
+    "test:soap-autocomplete": "node scripts/test-soap-autocomplete.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^4.1.2",
@@ -53,6 +55,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
     "cors": "^2.8.5",
+    "@elastic/elasticsearch": "^8.11.0",
     "date-fns": "^3.6.0",
     "dayjs": "^1.11.13",
     "embla-carousel-react": "^8.5.2",

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { AutoCompleteTextarea } from "@/components/ui/auto-complete-textarea";
 import { FileText, Save, X, PlusCircle, Trash2, Upload, FileIcon, Image, TestTube2, CalendarIcon, PawPrint, Thermometer, HeartPulse, Wind, Droplets } from "lucide-react";
 import { UploadFile } from "@/api/integrations";
 import { Combobox } from "@/components/ui/combobox";
@@ -194,7 +195,7 @@ export default function MedicalRecordForm({ record, pets, clients, veterinarians
     setViewerOpen(true);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     // Validation
@@ -227,7 +228,32 @@ export default function MedicalRecordForm({ record, pets, clients, veterinarians
     };
 
     console.log('Submitting medical record data:', finalData);
-    onSubmit(finalData);
+    
+    // Submit the form
+    await onSubmit(finalData);
+    
+    // Index the SOAP note in Elasticsearch for future suggestions
+    try {
+      const response = await fetch('/api/soap/index', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          medicalRecord: finalData
+        })
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ SOAP note indexed for suggestions:', result.message);
+      } else {
+        console.warn('⚠️  Failed to index SOAP note for suggestions');
+      }
+    } catch (error) {
+      console.warn('⚠️  Error indexing SOAP note:', error);
+      // Don't fail the form submission if indexing fails
+    }
   };
 
   const FileUploadSection = ({ category, title, icon: Icon }) => (
@@ -360,10 +386,26 @@ export default function MedicalRecordForm({ record, pets, clients, veterinarians
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-4"><TabsTrigger value="subjective">Subjective</TabsTrigger><TabsTrigger value="objective">Objective</TabsTrigger><TabsTrigger value="assessment">Assessment</TabsTrigger><TabsTrigger value="plan">Plan</TabsTrigger></TabsList>
 
-              <TabsContent value="subjective" className="mt-4"><Textarea placeholder="Enter chief complaint, history, and client observations..." value={formData.subjective} onChange={(e) => handleChange('subjective', e.target.value)} rows={12} /></TabsContent>
+              <TabsContent value="subjective" className="mt-4">
+                <AutoCompleteTextarea
+                  field="subjective"
+                  patient={availablePets.find(p => p.id === formData.pet_id)}
+                  value={formData.subjective}
+                  onChange={(e) => handleChange('subjective', e.target.value)}
+                  placeholder="Enter chief complaint, history, and client observations..."
+                  rows={12}
+                />
+              </TabsContent>
 
               <TabsContent value="objective" className="mt-4 space-y-4">
-                <Textarea placeholder="Enter physical examination findings..." value={formData.objective} onChange={(e) => handleChange('objective', e.target.value)} rows={8} />
+                <AutoCompleteTextarea
+                  field="objective"
+                  patient={availablePets.find(p => p.id === formData.pet_id)}
+                  value={formData.objective}
+                  onChange={(e) => handleChange('objective', e.target.value)}
+                  placeholder="Enter physical examination findings..."
+                  rows={8}
+                />
                 <div className="p-4 border rounded-lg space-y-4">
                   <h4 className="font-semibold">Vitals</h4>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -391,10 +433,26 @@ export default function MedicalRecordForm({ record, pets, clients, veterinarians
                 <FileUploadSection category="other_attachments" title="Other Documents" icon={FileIcon} />
               </TabsContent>
 
-              <TabsContent value="assessment" className="mt-4"><Textarea placeholder="Enter diagnosis, differential diagnoses, or assessment of the case..." value={formData.assessment} onChange={(e) => handleChange('assessment', e.target.value)} rows={12} /></TabsContent>
+              <TabsContent value="assessment" className="mt-4">
+                <AutoCompleteTextarea
+                  field="assessment"
+                  patient={availablePets.find(p => p.id === formData.pet_id)}
+                  value={formData.assessment}
+                  onChange={(e) => handleChange('assessment', e.target.value)}
+                  placeholder="Enter diagnosis, differential diagnoses, or assessment of the case..."
+                  rows={12}
+                />
+              </TabsContent>
 
               <TabsContent value="plan" className="mt-4 space-y-4">
-                <Textarea placeholder="Enter treatment plan, further diagnostics, and client communication..." value={formData.plan} onChange={(e) => handleChange('plan', e.target.value)} rows={6} />
+                <AutoCompleteTextarea
+                  field="plan"
+                  patient={availablePets.find(p => p.id === formData.pet_id)}
+                  value={formData.plan}
+                  onChange={(e) => handleChange('plan', e.target.value)}
+                  placeholder="Enter treatment plan, further diagnostics, and client communication..."
+                  rows={6}
+                />
                 <div className="p-4 border rounded-lg space-y-4">
                   <div className="flex justify-between items-center"><h4 className="font-semibold">Medications</h4><Button type="button" variant="outline" size="sm" onClick={addMedication} className="gap-1"><PlusCircle className="w-4 h-4" /> Add</Button></div>
                   <div className="space-y-2">

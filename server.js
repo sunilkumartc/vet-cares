@@ -5,6 +5,14 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fetch from 'node-fetch';
 import cron from 'node-cron';
+import { 
+  initializeElasticsearch, 
+  searchSOAPSuggestions, 
+  getCompletionSuggestions,
+  bulkIndexSOAPNotes,
+  getIndexStats,
+  indexSOAPField
+} from './src/api/elasticsearch.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -30,6 +38,17 @@ async function connectDB() {
     console.log('Connected to MongoDB');
   } catch (error) {
     console.error('MongoDB connection failed:', error);
+  }
+}
+
+async function initializeServices() {
+  try {
+    // Initialize Elasticsearch
+    await initializeElasticsearch();
+    console.log('✅ Elasticsearch initialized');
+  } catch (error) {
+    console.error('❌ Elasticsearch initialization failed:', error);
+    console.log('⚠️  Continuing without Elasticsearch - using fallback suggestions');
   }
 }
 
@@ -1067,6 +1086,236 @@ app.post('/api/vaccination/reminder', async (req, res) => {
   }
 });
 
+// SOAP Autocomplete API endpoint
+app.post('/api/soap/autocomplete', async (req, res) => {
+  try {
+    const { field, currentText, patient } = req.body;
+    
+    // Validate required fields
+    if (!field || !currentText) {
+      return res.status(400).json({
+        success: false,
+        error: 'Field and currentText are required'
+      });
+    }
+
+    // Get patient details for context
+    let patientData = null;
+    if (patient && patient.id) {
+      try {
+        const pet = await db.collection("pets").findOne({ _id: new ObjectId(patient.id) });
+        if (pet) {
+          patientData = {
+            id: pet._id.toString(),
+            species: pet.species,
+            breed: pet.breed,
+            age: pet.age,
+            sex: pet.sex,
+            name: pet.name
+          };
+        }
+      } catch (error) {
+        console.warn('Could not fetch patient details:', error.message);
+      }
+    }
+
+    let suggestion = "";
+    let source = "fallback";
+
+    try {
+      // Try Elasticsearch first
+      const elasticsearchSuggestions = await searchSOAPSuggestions(currentText, field, patientData, 3);
+      
+      if (elasticsearchSuggestions.length > 0) {
+        // Use the best match from Elasticsearch
+        suggestion = elasticsearchSuggestions[0].text;
+        source = "elasticsearch";
+        console.log(`✅ Elasticsearch suggestion for ${field}:`, suggestion);
+      } else {
+        // Fallback to rule-based suggestions
+        const patientContext = patientData ? `${patientData.species} ${patientData.breed}, ${patientData.age || 'unknown age'}, ${patientData.sex || 'unknown sex'}` : "";
+        suggestion = await generateSOAPSuggestion(field, currentText, patientContext);
+        source = "fallback";
+        console.log(`⚠️  Using fallback suggestion for ${field}:`, suggestion);
+      }
+    } catch (elasticsearchError) {
+      console.warn('Elasticsearch search failed, using fallback:', elasticsearchError.message);
+      
+      // Fallback to rule-based suggestions
+      const patientContext = patientData ? `${patientData.species} ${patientData.breed}, ${patientData.age || 'unknown age'}, ${patientData.sex || 'unknown sex'}` : "";
+      suggestion = await generateSOAPSuggestion(field, currentText, patientContext);
+      source = "fallback";
+    }
+    
+    res.json({
+      success: true,
+      suggestion,
+      source,
+      patient: patientData
+    });
+  } catch (error) {
+    console.error('Error generating SOAP autocomplete:', error);
+    res.status(500).json({
+      success: false,
+      error: `Failed to generate suggestion: ${error.message}`
+    });
+  }
+});
+
+// AI SOAP Suggestion Generator
+async function generateSOAPSuggestion(field, currentText, patientContext) {
+  // Veterinary knowledge base for different SOAP fields
+  const knowledgeBase = {
+    subjective: {
+      patterns: [
+        "Owner reports {symptom} for {duration}",
+        "Client noticed {symptom} {timeframe}",
+        "Patient presents with {symptom}",
+        "History of {condition}",
+        "Previous treatment: {treatment}"
+      ],
+      symptoms: [
+        "head shaking", "ear scratching", "lethargy", "decreased appetite", 
+        "vomiting", "diarrhea", "coughing", "sneezing", "limping", 
+        "excessive thirst", "frequent urination", "weight loss", "hair loss",
+        "skin lesions", "behavioral changes", "difficulty breathing"
+      ],
+      timeframes: [
+        "for the past 3 days", "for 1 week", "for 2 weeks", "since yesterday",
+        "for several days", "for the past month", "recently"
+      ]
+    },
+    objective: {
+      patterns: [
+        "{finding} present", "{finding} observed", "{finding} noted",
+        "Temperature: {temp}°F", "Heart rate: {hr} bpm", "Respiratory rate: {rr} rpm",
+        "Weight: {weight} kg", "CRT: {crt} seconds", "BP: {bp} mmHg"
+      ],
+      findings: [
+        "ear canal erythema", "aural discharge", "otitis externa", "pyoderma",
+        "alopecia", "pruritus", "erythema", "edema", "pain on palpation",
+        "dehydration", "mucous membrane color", "lymph node enlargement",
+        "abdominal distension", "joint swelling", "lameness"
+      ],
+      vitals: {
+        temp: ["101.5", "102.1", "103.2", "104.0", "100.8"],
+        hr: ["120", "140", "160", "180", "100"],
+        rr: ["20", "25", "30", "35", "15"],
+        weight: ["5.2", "12.5", "25.0", "35.8", "8.3"],
+        crt: ["1.5", "2.0", "2.5", "3.0", "1.0"],
+        bp: ["120/80", "140/90", "160/100", "110/70", "130/85"]
+      }
+    },
+    assessment: {
+      patterns: [
+        "Probable {diagnosis}",
+        "Differential diagnoses: {differentials}",
+        "Rule out: {ruleOut}",
+        "Primary diagnosis: {diagnosis}",
+        "Secondary: {secondary}"
+      ],
+      diagnoses: [
+        "otitis externa - bacterial", "otitis externa - yeast", "otitis media",
+        "pyoderma", "dermatitis", "allergic skin disease", "parasitic infestation",
+        "gastroenteritis", "pancreatitis", "hepatitis", "renal disease",
+        "cardiac disease", "respiratory infection", "orthopedic injury"
+      ],
+      differentials: [
+        "bacterial vs yeast infection", "allergic vs parasitic", "viral vs bacterial",
+        "primary vs secondary disease", "acute vs chronic condition"
+      ]
+    },
+    plan: {
+      patterns: [
+        "{test} today", "Start {medication} {frequency} for {duration}",
+        "Recheck in {timeframe}", "Follow up in {timeframe}",
+        "Continue {treatment} as prescribed", "Discontinue {medication}"
+      ],
+      tests: [
+        "Cytology", "Culture and sensitivity", "Blood work", "Radiographs",
+        "Ultrasound", "Skin scraping", "Ear cytology", "Fecal examination"
+      ],
+      medications: [
+        "OticClean BID", "Enrofloxacin drops", "Prednisolone", "Amoxicillin",
+        "Metronidazole", "Fenbendazole", "Ivermectin", "Cephalexin"
+      ],
+      frequencies: ["BID", "TID", "QID", "once daily", "twice daily"],
+      durations: ["7 days", "10 days", "14 days", "21 days", "30 days"],
+      timeframes: ["3 days", "1 week", "2 weeks", "1 month", "3 months"]
+    }
+  };
+
+  // Get field-specific knowledge
+  const fieldKnowledge = knowledgeBase[field];
+  if (!fieldKnowledge) {
+    return "";
+  }
+
+  // Analyze current text to understand context
+  const words = currentText.toLowerCase().split(/\s+/);
+  const lastWord = words[words.length - 1] || "";
+  
+  // Generate contextual suggestion
+  let suggestion = "";
+  
+  if (field === 'subjective') {
+    if (words.length < 3) {
+      // Start with a basic pattern
+      const pattern = fieldKnowledge.patterns[Math.floor(Math.random() * fieldKnowledge.patterns.length)];
+      const symptom = fieldKnowledge.symptoms[Math.floor(Math.random() * fieldKnowledge.symptoms.length)];
+      const timeframe = fieldKnowledge.timeframes[Math.floor(Math.random() * fieldKnowledge.timeframes.length)];
+      
+      suggestion = pattern
+        .replace('{symptom}', symptom)
+        .replace('{duration}', timeframe)
+        .replace('{timeframe}', timeframe);
+    } else if (lastWord.includes('ear') || lastWord.includes('scratch')) {
+      suggestion = "head shaking and scratching for 3 days";
+    } else if (lastWord.includes('vomit') || lastWord.includes('throw')) {
+      suggestion = "decreased appetite and lethargy";
+    }
+  } else if (field === 'objective') {
+    if (words.length < 2) {
+      const finding = fieldKnowledge.findings[Math.floor(Math.random() * fieldKnowledge.findings.length)];
+      suggestion = `${finding} present`;
+    } else if (lastWord.includes('ear') || lastWord.includes('canal')) {
+      suggestion = "erythematous; aural discharge present; temp 102.1°F";
+    } else if (lastWord.includes('temp') || lastWord.includes('temperature')) {
+      const temp = fieldKnowledge.vitals.temp[Math.floor(Math.random() * fieldKnowledge.vitals.temp.length)];
+      suggestion = `${temp}°F`;
+    }
+  } else if (field === 'assessment') {
+    if (words.length < 2) {
+      const diagnosis = fieldKnowledge.diagnoses[Math.floor(Math.random() * fieldKnowledge.diagnoses.length)];
+      suggestion = `Probable ${diagnosis}`;
+    } else if (lastWord.includes('otitis') || lastWord.includes('ear')) {
+      suggestion = "otitis externa – bacterial, r/o yeast";
+    } else if (lastWord.includes('skin') || lastWord.includes('dermat')) {
+      suggestion = "allergic skin disease, r/o parasitic infestation";
+    }
+  } else if (field === 'plan') {
+    if (words.length < 2) {
+      const test = fieldKnowledge.tests[Math.floor(Math.random() * fieldKnowledge.tests.length)];
+      const medication = fieldKnowledge.medications[Math.floor(Math.random() * fieldKnowledge.medications.length)];
+      const frequency = fieldKnowledge.frequencies[Math.floor(Math.random() * fieldKnowledge.frequencies.length)];
+      const duration = fieldKnowledge.durations[Math.floor(Math.random() * fieldKnowledge.durations.length)];
+      
+      suggestion = `${test} today; start ${medication} ${frequency} for ${duration}`;
+    } else if (lastWord.includes('cytology') || lastWord.includes('test')) {
+      suggestion = "start OticClean BID + Enrofloxacin drops 10d; recheck in 14d";
+    } else if (lastWord.includes('medication') || lastWord.includes('treatment')) {
+      suggestion = "recheck in 14 days";
+    }
+  }
+
+  // Add patient context if available
+  if (patientContext && suggestion) {
+    suggestion = `${patientContext}: ${suggestion}`;
+  }
+
+  return suggestion;
+}
+
 // WhatsApp Invoice API endpoint (backend proxy to avoid CORS)
 app.post('/api/whatsapp/send-invoice', async (req, res) => {
   try {
@@ -1163,6 +1412,154 @@ app.post('/api/whatsapp/send-invoice', async (req, res) => {
     res.status(500).json({
       success: false,
       error: `Failed to send WhatsApp message: ${error.message}`
+    });
+  }
+});
+
+// SOAP Note Indexing API endpoints
+app.post('/api/soap/index', async (req, res) => {
+  try {
+    const { medicalRecord } = req.body;
+    
+    if (!medicalRecord || !medicalRecord.pet_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'Medical record with pet_id is required'
+      });
+    }
+
+    // Get pet details
+    const pet = await db.collection("pets").findOne({ _id: new ObjectId(medicalRecord.pet_id) });
+    if (!pet) {
+      return res.status(404).json({
+        success: false,
+        error: 'Pet not found'
+      });
+    }
+
+    // Index each SOAP field
+    const fields = ['subjective', 'objective', 'assessment', 'plan'];
+    const indexedFields = [];
+
+    for (const field of fields) {
+      if (medicalRecord[field] && medicalRecord[field].trim()) {
+        try {
+          await indexSOAPField({
+            field,
+            text: medicalRecord[field],
+            pet: {
+              id: pet._id.toString(),
+              species: pet.species,
+              breed: pet.breed,
+              age: pet.age,
+              sex: pet.sex,
+              name: pet.name
+            },
+            tenant_id: medicalRecord.tenant_id
+          });
+          indexedFields.push(field);
+        } catch (error) {
+          console.error(`Error indexing ${field} field:`, error);
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Indexed ${indexedFields.length} SOAP fields`,
+      indexedFields
+    });
+  } catch (error) {
+    console.error('Error indexing SOAP note:', error);
+    res.status(500).json({
+      success: false,
+      error: `Failed to index SOAP note: ${error.message}`
+    });
+  }
+});
+
+// Bulk index all SOAP notes from MongoDB
+app.post('/api/soap/bulk-index', async (req, res) => {
+  try {
+    const { tenant_id } = req.query;
+    
+    // Get all medical records from MongoDB
+    const collection = db.collection('medical_records');
+    const query = tenant_id ? { tenant_id } : {};
+    
+    const medicalRecords = await collection.find(query).toArray();
+    
+    if (medicalRecords.length === 0) {
+      return res.json({
+        success: true,
+        message: 'No medical records found to index',
+        indexedCount: 0
+      });
+    }
+
+    // Get pet details for each record
+    const recordsWithPets = [];
+    for (const record of medicalRecords) {
+      if (record.pet_id) {
+        const pet = await db.collection("pets").findOne({ _id: new ObjectId(record.pet_id) });
+        if (pet) {
+          recordsWithPets.push({
+            ...record,
+            pet: {
+              id: pet._id.toString(),
+              species: pet.species,
+              breed: pet.breed,
+              age: pet.age,
+              sex: pet.sex,
+              name: pet.name
+            }
+          });
+        }
+      }
+    }
+
+    // Bulk index all records
+    await bulkIndexSOAPNotes(recordsWithPets);
+
+    res.json({
+      success: true,
+      message: `Bulk indexed ${recordsWithPets.length} medical records`,
+      indexedCount: recordsWithPets.length
+    });
+  } catch (error) {
+    console.error('Error bulk indexing SOAP notes:', error);
+    res.status(500).json({
+      success: false,
+      error: `Failed to bulk index SOAP notes: ${error.message}`
+    });
+  }
+});
+
+// Get Elasticsearch index statistics
+app.get('/api/soap/stats', async (req, res) => {
+  try {
+    const stats = await getIndexStats();
+    
+    if (!stats) {
+      return res.status(404).json({
+        success: false,
+        error: 'Elasticsearch index not found or not accessible'
+      });
+    }
+
+    res.json({
+      success: true,
+      stats: {
+        totalDocs: stats.total?.docs?.count || 0,
+        indexSize: stats.total?.store?.size_in_bytes || 0,
+        fieldStats: stats.total?.fielddata?.memory_size_in_bytes || 0
+      }
+    });
+  } catch (error) {
+    console.error('Error getting Elasticsearch stats:', error);
+    res.status(500).json({
+      success: false,
+      error: `Failed to get stats: ${error.message}`
     });
   }
 });
@@ -1286,7 +1683,8 @@ app.get('*', (req, res) => {
 });
 
 // Start server
-connectDB().then(() => {
+connectDB().then(async () => {
+  await initializeServices();
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
