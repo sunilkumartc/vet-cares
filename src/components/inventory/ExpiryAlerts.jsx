@@ -227,7 +227,7 @@ export default function ExpiryAlerts() {
                             )}
                           </div>
                           <div>
-                            <h3 className="font-semibold text-lg">{product?.name || 'Unknown TenantProduct'}</h3>
+                            <h3 className="font-semibold text-lg">{product?.name || 'Unknown Product'}</h3>
                             <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
                               <span>Batch: {batch.batch_id}</span>
                               {batch.lot_number && <span>Lot: {batch.lot_number}</span>}

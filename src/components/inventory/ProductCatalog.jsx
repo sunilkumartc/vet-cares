@@ -156,12 +156,15 @@ export default function ProductCatalog() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">TenantProduct Catalog</h2>
-          <p className="text-gray-600">Manage your clinic's product inventory</p>
+          <h2 className="text-2xl font-bold text-gray-900">Product Catalog</h2>
+          <p className="text-gray-600 mt-1">Manage your product inventory</p>
         </div>
-        <Button onClick={() => setShowForm(true)} className="bg-blue-600 hover:bg-blue-700">
-          <Plus className="w-4 h-4 mr-2" />
-          Add TenantProduct
+        <Button 
+          onClick={() => { setEditingProduct(null); setShowForm(true); }}
+          className="bg-blue-600 hover:bg-blue-700 gap-2"
+        >
+          <Plus className="w-4 h-4" />
+          Add Product
         </Button>
       </div>
 
@@ -195,7 +198,7 @@ export default function ProductCatalog() {
           ) : filteredProducts.length === 0 ? (
             <div className="text-center py-12">
               <Package className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No products found</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Add First Product</h3>
               <p className="text-gray-500 mb-4">
                 {searchTerm ? "Try adjusting your search terms" : "Get started by adding your first product"}
               </p>

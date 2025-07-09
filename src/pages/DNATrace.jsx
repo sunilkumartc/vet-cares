@@ -84,7 +84,7 @@ export default function DNATracePage() {
                 <Heart className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">Dr. Ravi TenantPet Portal</h1>
+                <h1 className="text-xl font-bold text-gray-900">Dr. Ravi Pet Portal</h1>
                 <p className="text-xs text-gray-500">DNA Trace</p>
               </div>
             </Link>
@@ -260,7 +260,7 @@ export default function DNATracePage() {
       {/* Footer */}
       <footer className="bg-gray-800 text-white py-8">
         <div className="max-w-6xl mx-auto px-6 text-center text-gray-400">
-           <p>© {new Date().getFullYear()} Dr. Ravi TenantPet Portal. All Rights Reserved.</p>
+           <p>© {new Date().getFullYear()} Dr. Ravi Pet Portal. All Rights Reserved.</p>
            <p className="text-sm mt-2">Advanced genetic testing for better pet health in Malleshwaram, Bengaluru.</p>
         </div>
       </footer>

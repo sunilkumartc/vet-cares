@@ -98,8 +98,23 @@ class BaseApiEntity {
 
   async get(id) {
     const tenant = await this.getCurrentTenant();
+    console.log(`API Client - Getting ${this.entityName} with ID:`, id);
+    console.log(`API Client - Current tenant:`, tenant);
+    
     const params = tenant ? { tenant_id: tenant.id } : {};
-    return this.api.get(`/${this.entityName}/${id}`, params);
+    console.log(`API Client - Request params:`, params);
+    
+    const url = `/${this.entityName}/${id}`;
+    console.log(`API Client - Request URL:`, url);
+    
+    try {
+      const result = await this.api.get(url, params);
+      console.log(`API Client - ${this.entityName} result:`, result);
+      return result;
+    } catch (error) {
+      console.error(`API Client - Error getting ${this.entityName}:`, error);
+      throw error;
+    }
   }
 
   async create(data) {

@@ -348,7 +348,7 @@ export default function ClientManagement() {
       setShowInvoiceForm(false);
       setEditingInvoice(null);
       await loadSelectedClientSpecificData(selectedClient.id); // Reload specific client data including invoices and products
-      alert("TenantInvoice saved successfully!");
+      alert("Invoice saved successfully!");
     } catch (error) {
       console.error("Error saving invoice:", error);
       alert("Failed to save invoice: " + error.message);
@@ -760,7 +760,7 @@ export default function ClientManagement() {
                 className="border-purple-300 text-purple-700 hover:bg-purple-50"
               >
                 <Syringe className="w-4 h-4 mr-1" />
-                TenantVaccination
+                Vaccination
               </Button>
               <Button
                 size="sm"
@@ -781,7 +781,7 @@ export default function ClientManagement() {
                 className="border-amber-300 text-amber-700 hover:bg-amber-50"
               >
                 <StickyNote className="w-4 h-4 mr-1" />
-                Add TenantMemo
+                Add Memo
               </Button>
             </div>
           </div>
@@ -873,7 +873,7 @@ export default function ClientManagement() {
                               date={event.date}
                               icon={StickyNote}
                               color={memoColor}
-                              title={`Internal TenantMemo${petName}`}
+                              title={`Internal Memo${petName}`}
                               badgeText={isUrgent ? 'URGENT' : null} // Use badgeText for urgent, category specific badge inside
                             >
                               <div className="space-y-2">

@@ -85,7 +85,7 @@ export default function SalesReports() {
       if (sale.items) {
         sale.items.forEach(item => {
           const product = products.find(p => p.id === item.product_id);
-          const productName = product?.name || 'Unknown TenantProduct';
+          const productName = product?.name || 'Unknown Product';
           if (!productSales[productName]) {
             productSales[productName] = { name: productName, quantity: 0, revenue: 0 };
           }
@@ -119,7 +119,7 @@ export default function SalesReports() {
       if (sale.items) {
         sale.items.forEach(item => {
           const product = products.find(p => p.id === item.product_id);
-          const productName = product?.name || 'Unknown TenantProduct';
+          const productName = product?.name || 'Unknown Product';
           if (!productStats[productName]) {
             productStats[productName] = {
               name: productName,
@@ -209,7 +209,7 @@ export default function SalesReports() {
         </head>
         <body>
           <h1>Dr. Ravi TenantPet Portal - Sales Report</h1>
-          <p><strong>Report Type:</strong> ${reportType === 'overview' ? 'Overview' : reportType === 'products' ? 'TenantProduct Analysis' : 'Customer Insights'}</p>
+          <p><strong>Report Type:</strong> ${reportType === 'overview' ? 'Overview' : reportType === 'products' ? 'Product Analysis' : 'Customer Insights'}</p>
           <p><strong>Date Range:</strong> ${format(dateRange.from, 'MMM dd, yyyy')} - ${format(dateRange.to, 'MMM dd, yyyy')}</p>
           <p><strong>Generated:</strong> ${format(new Date(), 'PPP')}</p>
 
@@ -237,7 +237,7 @@ export default function SalesReports() {
               <h2>Top Products by Revenue</h2>
               <table>
                 <thead>
-                  <tr><th>Rank</th><th>TenantProduct</th><th>Units Sold</th><th>Revenue</th></tr>
+                  <tr><th>Rank</th><th>Product</th><th>Units Sold</th><th>Revenue</th></tr>
                 </thead>
                 <tbody>
                   ${overviewData.topProducts.map((product, index) => `
@@ -254,10 +254,10 @@ export default function SalesReports() {
           ` : ''}
 
           ${reportType === 'products' && productData.length > 0 ? `
-            <h2>TenantProduct Performance</h2>
+            <h2>Product Performance</h2>
             <table>
               <thead>
-                <tr><th>TenantProduct</th><th>Category</th><th>Units Sold</th><th>Revenue</th><th>Avg Price</th></tr>
+                <tr><th>Product</th><th>Category</th><th>Units Sold</th><th>Revenue</th><th>Avg Price</th></tr>
               </thead>
               <tbody>
                 ${productData.map(product => `
@@ -368,7 +368,7 @@ export default function SalesReports() {
       <Tabs value={reportType} onValueChange={setReportType}>
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="products">TenantProduct Analysis</TabsTrigger>
+          <TabsTrigger value="products">Product Analysis</TabsTrigger>
           <TabsTrigger value="customers">Customer Insights</TabsTrigger>
         </TabsList>
 
@@ -489,7 +489,7 @@ export default function SalesReports() {
         <TabsContent value="products" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>TenantProduct Performance</CardTitle>
+              <CardTitle>Product Performance</CardTitle>
             </CardHeader>
             <CardContent>
               {productData.length > 0 ? (

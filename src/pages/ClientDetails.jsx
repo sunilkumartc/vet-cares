@@ -100,7 +100,7 @@ export default function ClientDetails() {
     }
   };
 
-  const getPetName = (petId) => pets.find(p => p.id === petId)?.name || 'Unknown TenantPet';
+  const getPetName = (petId) => pets.find(p => p.id === petId)?.name || 'Unknown Pet';
 
   if (loading) {
     return (
@@ -124,10 +124,10 @@ export default function ClientDetails() {
       <div className="p-4 md:p-8">
         <div className="text-center py-12">
           <User className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">TenantClient Not Found</h3>
-          <p className="text-gray-600 mb-4">The requested client could not be found.</p>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Client Not Found</h3>
+          <p>The client you are looking for does not exist.</p>
           <Link to={createPageUrl("Clients")}>
-            <Button variant="outline">Back to Clients</Button>
+            <Button variant="outline" className="mt-4">Go Back</Button>
           </Link>
         </div>
       </div>
@@ -149,7 +149,7 @@ export default function ClientDetails() {
             <h1 className="text-3xl font-bold text-gray-900">
               {client.first_name} {client.last_name}
             </h1>
-            <p className="text-gray-600">TenantClient Details & TenantPet Information</p>
+            <p className="text-gray-600">Client Details & Pet Information</p>
           </div>
         </div>
       </div>
@@ -160,7 +160,7 @@ export default function ClientDetails() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="w-5 h-5 text-blue-600" />
-              TenantClient Information
+              Client Information
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -388,7 +388,7 @@ export default function ClientDetails() {
                 <Card>
                   <CardContent className="text-center py-12">
                     <Syringe className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No TenantVaccination Records</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No Vaccination Records</h3>
                     <p className="text-gray-600">No vaccination records found for this client's pets.</p>
                   </CardContent>
                 </Card>

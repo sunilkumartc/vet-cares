@@ -1,14 +1,16 @@
 
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { TenantInvoice, TenantClient, TenantPet } from '@/api/tenant-entities';
 import { createPageUrl } from '@/utils';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Printer, Download, Share2, Heart, Mail, Phone, PawPrint, Building, User as UserIcon } from "lucide-react";
+import { ArrowLeft, Printer, Download, Share2, Heart, Mail, Phone, PawPrint, Building, User as UserIcon, Send, Loader2 } from "lucide-react";
 import { format } from 'date-fns';
+import { toast } from '@/components/ui/use-toast';
+import { sendInvoice, canSendInvoice } from '@/services/invoiceService';
 
 const statusColors = {
   draft: "bg-gray-100 text-gray-800",
@@ -23,7 +25,10 @@ export default function InvoiceDetails() {
   const [client, setClient] = useState(null);
   const [pet, setPet] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [isStaff, setIsStaff] = useState(false);
+  const [sendingInvoice, setSendingInvoice] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -37,11 +42,16 @@ export default function InvoiceDetails() {
 
     const loadInvoiceDetails = async () => {
       if (!id) {
+        setError('No invoice ID provided');
         setLoading(false);
         return;
       }
+      
       try {
+        console.log('Loading invoice with ID:', id);
         const invoiceData = await TenantInvoice.get(id);
+        console.log('Invoice data received:', invoiceData);
+        
         if (invoiceData) {
           setInvoice(invoiceData);
           // Fetch client and pet details concurrently
@@ -51,9 +61,26 @@ export default function InvoiceDetails() {
           ]);
           setClient(clientData);
           setPet(petData);
+        } else {
+          setError('Invoice not found');
+          toast({
+            variant: 'destructive',
+            title: 'Invoice not found',
+            description: 'The invoice you are looking for does not exist.',
+          });
+          navigate('/billing');
         }
       } catch (error) {
         console.error("Failed to load invoice details:", error);
+        setError(error.message || 'Failed to load invoice details');
+        if (error.message && error.message.toLowerCase().includes('not found')) {
+          toast({
+            variant: 'destructive',
+            title: 'Invoice not found',
+            description: 'The invoice you are looking for does not exist.',
+          });
+          navigate('/billing');
+        }
       } finally {
         setLoading(false);
       }
@@ -66,6 +93,35 @@ export default function InvoiceDetails() {
     window.print();
   };
 
+  const handleSendInvoice = async () => {
+    if (!invoice) return;
+    
+    setSendingInvoice(true);
+    try {
+      const result = await sendInvoice(invoice.id);
+      
+      toast({
+        title: "Invoice Sent Successfully!",
+        description: result.message,
+        variant: "default",
+      });
+      
+      // Refresh the page to show updated status
+      window.location.reload();
+      
+    } catch (error) {
+      console.error('Error sending invoice:', error);
+      
+      toast({
+        title: "Failed to Send Invoice",
+        description: error.message || "An error occurred while sending the invoice",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingInvoice(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-8 space-y-6">
@@ -75,11 +131,23 @@ export default function InvoiceDetails() {
     );
   }
 
-  if (!invoice) {
+  if (error || !invoice) {
     return (
       <div className="p-8 text-center">
-        <h2 className="text-xl font-semibold">TenantInvoice not found</h2>
-        <p>The invoice you are looking for does not exist.</p>
+        <h2 className="text-xl font-semibold text-red-600">Invoice not found</h2>
+        <p className="text-gray-600 mt-2">
+          {error || 'The invoice you are looking for does not exist.'}
+        </p>
+        <div className="mt-4 space-y-2">
+          <p className="text-sm text-gray-500">
+            This could be due to:
+          </p>
+          <ul className="text-sm text-gray-500 list-disc list-inside">
+            <li>The invoice ID is invalid</li>
+            <li>The invoice has been deleted</li>
+            <li>You don't have permission to view this invoice</li>
+          </ul>
+        </div>
         <Link to={createPageUrl(isStaff ? "Billing" : "MyInvoices")}>
           <Button variant="outline" className="mt-4">Go Back</Button>
         </Link>
@@ -101,6 +169,27 @@ export default function InvoiceDetails() {
             </Button>
           </Link>
           <div className="flex items-center gap-2">
+            {isStaff && canSendInvoice(invoice) && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleSendInvoice}
+                disabled={sendingInvoice}
+                className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+              >
+                {sendingInvoice ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4 mr-2" />
+                    Send Invoice
+                  </>
+                )}
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={handlePrint}>
               <Printer className="w-4 h-4 mr-2" /> Print / PDF
             </Button>
@@ -116,7 +205,7 @@ export default function InvoiceDetails() {
                     <Heart className="w-7 h-7 text-blue-600" />
                   </div>
                   <div>
-                    <h2 className="text-2xl font-bold text-gray-900">Dr. Ravi TenantPet Portal</h2>
+                    <h2 className="text-2xl font-bold text-gray-900">Dr. Ravi Pet Portal</h2>
                     <p className="text-gray-500">No. 32, 4th temple Street road, Malleshwaram, Bengaluru</p>
                   </div>
                 </div>
@@ -141,15 +230,15 @@ export default function InvoiceDetails() {
                     <p className="text-gray-600 flex items-center gap-2 mt-1"><Phone className="w-4 h-4" /> {client.phone}</p>
                     <p className="text-gray-600 mt-1">{client.address}</p>
                   </>
-                ) : <p>TenantClient not found</p>}
+                ) : <p>Client not found</p>}
               </div>
               <div className="text-left md:text-right">
                  <h3 className="font-semibold text-gray-500 uppercase tracking-wider text-sm mb-2">Patient</h3>
                  {pet ? (
                     <p className="font-bold text-lg text-gray-800 flex items-center gap-2 justify-start md:justify-end"><PawPrint className="w-5 h-5" />{pet.name}</p>
-                 ) : <p>TenantPet not found</p>}
-                 <p className="mt-2"><strong>TenantInvoice Date:</strong> {format(new Date(invoice.invoice_date), 'dd MMM yyyy')}</p>
-                 <p><strong>Due Date:</strong> {format(new Date(invoice.due_date), 'dd MMM yyyy')}</p>
+                 ) : <p>Pet not found</p>}
+                 <p className="mt-2"><strong>Invoice Date:</strong> {invoice.invoice_date && !isNaN(new Date(invoice.invoice_date)) ? format(new Date(invoice.invoice_date), 'dd MMM yyyy') : 'N/A'}</p>
+                 <p><strong>Due Date:</strong> {invoice.due_date && !isNaN(new Date(invoice.due_date)) ? format(new Date(invoice.due_date), 'dd MMM yyyy') : 'N/A'}</p>
               </div>
             </div>
 

@@ -89,7 +89,7 @@ export default function StaffLogin() {
           <CardTitle className="text-2xl font-bold text-gray-900">
             Staff Portal
           </CardTitle>
-          <p className="text-gray-600">Dr. Ravi's TenantPet Clinic</p>
+          <p className="text-gray-600">Dr. Ravi's Pet Clinic</p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">

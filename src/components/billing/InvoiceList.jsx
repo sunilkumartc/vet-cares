@@ -1,13 +1,15 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, PawPrint, User, Edit, Eye, FileText } from "lucide-react";
+import { Calendar, PawPrint, User, Edit, Eye, FileText, Send, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { sendInvoice, canSendInvoice } from "@/services/invoiceService";
+import { useToast } from "@/components/ui/use-toast";
 
 const statusColors = {
   draft: "bg-gray-100 text-gray-800",
@@ -18,8 +20,43 @@ const statusColors = {
 };
 
 export default function InvoiceList({ invoices, pets, clients, loading, onEdit }) {
+  const [sendingInvoices, setSendingInvoices] = useState(new Set());
+  const { toast } = useToast();
+  
   const getPetInfo = (petId) => pets.find(p => p.id === petId);
   const getClientInfo = (clientId) => clients.find(c => c.id === clientId);
+
+  const handleSendInvoice = async (invoiceId) => {
+    setSendingInvoices(prev => new Set(prev).add(invoiceId));
+    
+    try {
+      const result = await sendInvoice(invoiceId);
+      
+      toast({
+        title: "Invoice Sent Successfully!",
+        description: result.message,
+        variant: "default",
+      });
+      
+      // Refresh the page to show updated status
+      window.location.reload();
+      
+    } catch (error) {
+      console.error('Error sending invoice:', error);
+      
+      toast({
+        title: "Failed to Send Invoice",
+        description: error.message || "An error occurred while sending the invoice",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingInvoices(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(invoiceId);
+        return newSet;
+      });
+    }
+  };
 
   if (loading) {
     return (
@@ -69,7 +106,7 @@ export default function InvoiceList({ invoices, pets, clients, loading, onEdit }
                 <div className="flex-1 space-y-3">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <h3 className="text-lg font-semibold text-gray-900">
-                      TenantInvoice #{invoice.invoice_number}
+                      Invoice #{invoice.invoice_number}
                     </h3>
                     <Badge className={statusColors[invoice.status] || statusColors.draft}>
                       {invoice.status}
@@ -107,6 +144,29 @@ export default function InvoiceList({ invoices, pets, clients, loading, onEdit }
                       View
                     </Button>
                   </Link>
+                  
+                  {canSendInvoice(invoice) && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleSendInvoice(invoice.id)}
+                      disabled={sendingInvoices.has(invoice.id)}
+                      className="flex-1 lg:flex-none gap-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+                    >
+                      {sendingInvoices.has(invoice.id) ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-4 h-4" />
+                          Send Invoice
+                        </>
+                      )}
+                    </Button>
+                  )}
+                  
                   <Button
                     variant="outline"
                     size="sm"

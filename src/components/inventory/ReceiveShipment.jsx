@@ -163,7 +163,7 @@ export default function ReceiveShipment() {
             </div>
             
             <div className="space-y-2">
-              <Label>TenantInvoice Number</Label>
+              <Label>Invoice Number</Label>
               <Input
                 value={shipmentData.supplier_invoice}
                 onChange={(e) => handleShipmentDataChange('supplier_invoice', e.target.value)}

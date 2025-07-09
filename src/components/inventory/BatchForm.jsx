@@ -63,15 +63,18 @@ export default function BatchForm({ batch, products, onSubmit, onCancel }) {
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="product_id">TenantProduct *</Label>
-            <Select onValueChange={(value) => handleChange('product_id', value)} value={formData.product_id}>
-              <SelectTrigger id="product_id">
-                <SelectValue placeholder="Select product" />
+            <Label htmlFor="product_id">Product *</Label>
+            <Select
+              value={formData.product_id}
+              onValueChange={(value) => handleChange('product_id', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a product" />
               </SelectTrigger>
               <SelectContent>
-                {products.filter(p => p.is_active).map(product => (
+                {products.map((product) => (
                   <SelectItem key={product.id} value={product.id}>
-                    {product.name} ({product.product_id})
+                    {product.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -90,12 +93,12 @@ export default function BatchForm({ batch, products, onSubmit, onCancel }) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="supplier_invoice">Supplier TenantInvoice</Label>
+              <Label htmlFor="supplier_invoice">Supplier Invoice</Label>
               <Input
                 id="supplier_invoice"
-                value={formData.supplier_invoice}
+                value={formData.supplier_invoice || ''}
                 onChange={(e) => handleChange('supplier_invoice', e.target.value)}
-                placeholder="TenantInvoice reference"
+                placeholder="Invoice reference"
               />
             </div>
           </div>

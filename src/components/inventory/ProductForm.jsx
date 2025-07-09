@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Save, X, Upload, PackagePlus, Calendar as CalendarIcon } from "lucide-react";
+import { Save, X, Upload, PackagePlus, Calendar as CalendarIcon, Package } from "lucide-react";
 import { UploadFile } from "@/api/integrations";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -118,8 +118,8 @@ export default function ProductForm({ product, onSubmit, onCancel }) {
     <Card className="max-w-4xl mx-auto">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Save className="w-5 h-5" />
-          {product ? 'Edit TenantProduct' : 'Add New TenantProduct'}
+          <Package className="w-5 h-5" />
+          {product ? 'Edit Product' : 'Add New Product'}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -127,7 +127,7 @@ export default function ProductForm({ product, onSubmit, onCancel }) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">TenantProduct Name *</Label>
+                <Label htmlFor="name">Product Name *</Label>
                 <Input
                   id="name"
                   value={formData.name}
@@ -206,12 +206,12 @@ export default function ProductForm({ product, onSubmit, onCancel }) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="barcode">Barcode</Label>
+                <Label htmlFor="barcode">Product barcode</Label>
                 <Input
                   id="barcode"
-                  value={formData.barcode}
+                  value={formData.barcode || ''}
                   onChange={(e) => handleChange('barcode', e.target.value)}
-                  placeholder="TenantProduct barcode"
+                  placeholder="Product barcode"
                 />
               </div>
             </div>
@@ -248,33 +248,25 @@ export default function ProductForm({ product, onSubmit, onCancel }) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="image">TenantProduct Image</Label>
+                <Label htmlFor="image">Product Image</Label>
                 <div className="space-y-2">
                   <Input
                     id="image"
                     type="file"
                     accept="image/*"
                     onChange={handleImageUpload}
-                    disabled={uploading}
+                    className="cursor-pointer"
                   />
-                  {uploading && <p className="text-sm text-blue-600">Uploading image...</p>}
                   {formData.image_url && (
-                    <img 
-                      src={formData.image_url} 
-                      alt="TenantProduct preview"
-                      className="w-32 h-32 object-cover rounded-lg border"
-                    />
+                    <div className="mt-2">
+                      <img 
+                        src={formData.image_url} 
+                        alt="Product preview"
+                        className="w-32 h-32 object-cover rounded-lg border"
+                      />
+                    </div>
                   )}
                 </div>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="prescription_required"
-                  checked={formData.is_prescription_required}
-                  onCheckedChange={(checked) => handleChange('is_prescription_required', checked)}
-                />
-                <Label htmlFor="prescription_required">Prescription Required</Label>
               </div>
 
               <div className="flex items-center space-x-2">
@@ -283,7 +275,7 @@ export default function ProductForm({ product, onSubmit, onCancel }) {
                   checked={formData.is_active}
                   onCheckedChange={(checked) => handleChange('is_active', checked)}
                 />
-                <Label htmlFor="is_active">Active TenantProduct</Label>
+                <Label htmlFor="is_active">Active Product</Label>
               </div>
             </div>
           </div>
@@ -346,7 +338,7 @@ export default function ProductForm({ product, onSubmit, onCancel }) {
               id="description"
               value={formData.description}
               onChange={(e) => handleChange('description', e.target.value)}
-              placeholder="TenantProduct description and details"
+              placeholder="Product description and details"
               rows={3}
             />
           </div>
@@ -358,7 +350,7 @@ export default function ProductForm({ product, onSubmit, onCancel }) {
             </Button>
             <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
               <Save className="w-4 h-4 mr-2" />
-              {product ? 'Update TenantProduct' : 'Add TenantProduct'}
+              {product ? 'Update Product' : 'Add Product'}
             </Button>
           </div>
         </form>

@@ -60,11 +60,11 @@ const teamMembers = [
     name: "Dr. Bindu Sharma",
     title: "Associate Veterinarian",
     specialization: "Dermatology & Nutrition",
-    qualifications: "BVSc & AH, PG Diploma in TenantPet Nutrition",
-    experience: "5+ years",
+    qualifications: "BVSc & AH, PG Diploma in Pet Nutrition",
+    experience: "15+ years",
     image: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?q=80&w=800&auto=format&fit=crop",
     bio: "Dr. Bindu specializes in veterinary dermatology and pet nutrition. Her gentle approach and expertise in skin conditions and dietary management have helped countless pets achieve optimal health and comfort.",
-    expertise: ["Dermatology", "Allergy Management", "TenantPet Nutrition", "Wellness Exams"]
+    expertise: ["Dermatology", "Allergy Management", "Pet Nutrition", "Wellness Exams"]
   },
   {
     id: 3,
@@ -75,7 +75,7 @@ const teamMembers = [
     experience: "6+ years",
     image: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?q=80&w=800&auto=format&fit=crop",
     bio: "Praveen ensures smooth clinic operations while providing exceptional patient care. His expertise in handling animals and supporting veterinary procedures makes him an invaluable part of our team.",
-    expertise: ["Patient Handling", "Laboratory Procedures", "Surgical Assistance", "TenantClient Relations"]
+    expertise: ["Patient Handling", "Laboratory Procedures", "Surgical Assistance", "Client Relations"]
   }
 ];
 
@@ -103,7 +103,7 @@ export default function HomePage() {
                 <Heart className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">Dr. Ravi TenantPet Portal</h1>
+                <h1 className="text-xl font-bold text-gray-900">Dr. Ravi Pet Portal</h1>
                 <p className="text-xs text-gray-500">Caring for your furry family</p>
               </div>
             </div>
@@ -133,7 +133,7 @@ export default function HomePage() {
                   onClick={handleBookAppointment}
                   className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg"
                 >
-                  Book TenantAppointment
+                  Book Appointment
                 </Button>
               </div>
             </div>
@@ -189,7 +189,7 @@ export default function HomePage() {
                     onClick={handleBookAppointment}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                   >
-                    Book TenantAppointment
+                    Book Appointment
                   </Button>
                 </div>
               </div>
@@ -202,13 +202,13 @@ export default function HomePage() {
       <section className="relative bg-cover bg-center text-white" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1601758228041-f3b2795255f1?q=80&w=1924&auto=format&fit=crop')" }}>
         <div className="absolute inset-0 bg-black/50"></div>
         <div className="relative max-w-6xl mx-auto px-6 py-24 md:py-40 text-center">
-          <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight leading-tight">Your TenantPet's Health, Our Priority 🐾</h1>
+          <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight leading-tight">Your Pet's Health, Our Priority 🐾</h1>
           <p className="mt-4 max-w-3xl mx-auto text-lg md:text-xl text-gray-200">
-            Welcome to Dr. Ravi TenantPet Portal, where compassionate care meets modern veterinary medicine. We're dedicated to keeping your furry family members happy and healthy with personalized nutrition, wellness plans, and expert medical care.
+            Welcome to Dr. Ravi Pet Portal, where compassionate care meets modern veterinary medicine. We're dedicated to keeping your furry family members happy and healthy with personalized nutrition, wellness plans, and expert medical care.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row justify-center gap-4">
             <Button onClick={handleBookAppointment} size="lg" className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg">
-              Book an TenantAppointment
+              Book an Appointment
             </Button>
             {/* Removed "Explore TenantPet Care Tips" button */}
           </div>
@@ -384,7 +384,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* TenantPet Gallery Section */}
+      {/* Pet Gallery Section */}
       <section className="py-16 bg-gradient-to-r from-pink-50 to-purple-50">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-12">
@@ -512,7 +512,7 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="bg-gray-800 text-white py-8">
         <div className="max-w-6xl mx-auto px-6 text-center text-gray-400">
-           <p>© {new Date().getFullYear()} Dr. Ravi TenantPet Portal. All Rights Reserved.</p>
+           <p>© {new Date().getFullYear()} Dr. Ravi Pet Portal. All Rights Reserved.</p>
            <p className="text-sm mt-2">Caring for the pets of Malleshwaram, Bengaluru with love and expertise.</p>
         </div>
       </footer>

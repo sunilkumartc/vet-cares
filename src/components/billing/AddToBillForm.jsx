@@ -102,7 +102,7 @@ export default function AddToBillForm({ client, pet, onSubmit, onCancel }) {
                 {item.is_manual ? 'Manual Entry' : 'TenantProduct Search'}
               </Button>
               <span className="text-sm text-gray-600">
-                {item.is_manual ? 'Type custom service/item' : 'Search from product catalog'}
+                {item.is_manual ? 'Type custom service/item' : 'Product Search'}
               </span>
             </div>
 

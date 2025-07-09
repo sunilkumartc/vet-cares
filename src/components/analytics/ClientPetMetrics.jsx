@@ -70,63 +70,45 @@ export default function ClientPetMetrics({ clients, pets, dateRange }) {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Users className="w-5 h-5 text-blue-600" />
-          TenantClient & TenantPet Base
+          <Users className="w-5 h-5" />
+          Client & Pet Base
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Summary Stats */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="text-center p-3 bg-blue-50 rounded-lg">
-            <div className="flex items-center justify-center gap-2 mb-1">
-              <Users className="w-4 h-4 text-blue-600" />
-              <span className="text-sm font-medium text-blue-600">Total Clients</span>
-            </div>
-            <p className="text-xl font-bold text-blue-700">{metrics.totalClients}</p>
-            <p className="text-xs text-blue-600">+{metrics.newClientsInPeriod} in period</p>
+      <CardContent>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Client Registration Trend */}
+          <div>
+            <h4 className="text-sm font-medium text-gray-700 mb-3">New Client Registrations (Last 7 Days)</h4>
+            <ResponsiveContainer width="100%" height={150}>
+              <BarChart data={metrics.clientTrend}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="clients" fill="#3B82F6" />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
-          <div className="text-center p-3 bg-purple-50 rounded-lg">
-            <div className="flex items-center justify-center gap-2 mb-1">
-              <PawPrint className="w-4 h-4 text-purple-600" />
-              <span className="text-sm font-medium text-purple-600">Total Pets</span>
-            </div>
-            <p className="text-xl font-bold text-purple-700">{metrics.totalPets}</p>
-            <p className="text-xs text-purple-600">+{metrics.newPetsInPeriod} in period</p>
-          </div>
-        </div>
 
-        {/* TenantClient Registration Trend */}
-        <div>
-          <h4 className="text-sm font-medium text-gray-700 mb-3">New TenantClient Registrations (Last 7 Days)</h4>
-          <ResponsiveContainer width="100%" height={150}>
-            <BarChart data={metrics.clientTrend}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="clients" fill="#3B82F6" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Species Breakdown */}
-        <div>
-          <h4 className="text-sm font-medium text-gray-700 mb-3">TenantPet Species Distribution</h4>
-          <div className="space-y-2">
-            {metrics.speciesData.map((item, index) => (
-              <div key={index} className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">{item.species}</span>
-                <div className="flex items-center gap-2">
-                  <div className="w-20 bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-purple-600 h-2 rounded-full" 
-                      style={{ width: `${(item.count / metrics.totalPets) * 100}%` }}
-                    ></div>
+          {/* Species Breakdown */}
+          <div>
+            <h4 className="text-sm font-medium text-gray-700 mb-3">Pet Species Distribution</h4>
+            <div className="space-y-2">
+              {metrics.speciesData.map((item, index) => (
+                <div key={index} className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">{item.species}</span>
+                  <div className="flex items-center gap-2">
+                    <div className="w-20 bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-purple-600 h-2 rounded-full" 
+                        style={{ width: `${(item.count / metrics.totalPets) * 100}%` }}
+                      ></div>
+                    </div>
+                    <span className="text-sm font-medium text-gray-800 w-8">{item.count}</span>
                   </div>
-                  <span className="text-sm font-medium text-gray-800 w-8">{item.count}</span>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </CardContent>

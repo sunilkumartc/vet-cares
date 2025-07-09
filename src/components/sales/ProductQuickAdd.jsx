@@ -5,7 +5,7 @@ export default function ProductQuickAdd() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Quick Add TenantProduct</CardTitle>
+        <CardTitle>Quick Add Product</CardTitle>
       </CardHeader>
       <CardContent>
         <p>Functionality to quickly add a new product will be implemented here.</p>

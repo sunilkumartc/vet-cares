@@ -107,7 +107,7 @@ export default function Clients() {
         // Finally delete the client
         await TenantClient.delete(client.id);
         
-        alert('TenantClient and all related data deleted successfully.');
+        alert('Client and all related data deleted successfully.');
         loadClients();
       }
     } catch (error) {

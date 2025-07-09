@@ -16,7 +16,9 @@
     "create:admin": "node scripts/create-admin-user.js",
     "test:tenant:clinic3": "curl -s -H \"Host: clinic3.localhost:3001\" http://localhost:3001/api/tenant/current | jq .",
     "test:tenant:default": "curl -s -H \"Host: localhost:3001\" http://localhost:3001/api/tenant/current | jq .",
-    "test:tenant:test": "curl -s -H \"Host: test.localhost:3001\" http://localhost:3001/api/tenant/current | jq ."
+    "test:tenant:test": "curl -s -H \"Host: test.localhost:3001\" http://localhost:3001/api/tenant/current | jq .",
+    "vaccination-reminders": "node scripts/run-vaccination-reminders.js",
+    "setup:test-vaccination": "node scripts/setup-test-vaccination-data.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^4.1.2",
@@ -52,6 +54,7 @@
     "cmdk": "^1.0.0",
     "cors": "^2.8.5",
     "date-fns": "^3.6.0",
+    "dayjs": "^1.11.13",
     "embla-carousel-react": "^8.5.2",
     "express": "^4.18.2",
     "framer-motion": "^12.4.7",
@@ -60,6 +63,7 @@
     "lucide-react": "^0.475.0",
     "mongodb": "^6.3.0",
     "next-themes": "^0.4.4",
+    "node-cron": "^3.0.3",
     "node-fetch": "^2.7.0",
     "react": "^18.2.0",
     "react-day-picker": "^8.10.1",

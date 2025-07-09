@@ -64,8 +64,43 @@ export const sendWhatsAppReminder = async (data) => {
 };
 
 export const sendWhatsAppMessage = async (data) => {
-  console.log('Mock WhatsApp message sent:', data);
-  return { success: true, messageId: `wa-msg-${Date.now()}` };
+  try {
+    console.log('Sending WhatsApp message via backend:', data);
+    
+    // Call our backend endpoint instead of external API directly
+    const response = await fetch('/api/whatsapp/send-invoice', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        phone: data.phone,
+        customer_name: data.customer_name || "Customer",
+        amount: data.amount || 0,
+        pdf_url: data.pdf_url || data.document_url || "",
+        invoice_id: data.invoice_id,
+        tenant_id: data.tenant_id || null
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(`Backend API error: ${result.error || response.statusText}`);
+    }
+    
+    console.log('Backend WhatsApp API response:', result);
+    
+    return {
+      success: true,
+      messageId: result.messageId || `wa-msg-${Date.now()}`,
+      apiResponse: result
+    };
+  } catch (error) {
+    console.error('Error sending WhatsApp message:', error);
+    throw new Error(`Failed to send WhatsApp message: ${error.message}`);
+  }
 };
 
 export const sendVaccinationReminders = async (data) => {

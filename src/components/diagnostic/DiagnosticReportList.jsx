@@ -70,7 +70,7 @@ export default function DiagnosticReportList({ reports, pets, clients, templates
     }
     
     doc.setFontSize(10);
-    doc.text(template?.clinic_name || 'Dr. Ravi TenantPet Portal', pageWidth - margin, y + 5, { align: 'right' });
+    doc.text(template?.clinic_name || 'Dr. Ravi Pet Portal', pageWidth - margin, y + 5, { align: 'right' });
     doc.text(template?.clinic_address || 'No. 32, 4th temple Street road, Malleshwaram, Bengaluru', pageWidth - margin, y + 10, { align: 'right' });
     doc.text(template?.clinic_phone || '082961 43115', pageWidth - margin, y + 15, { align: 'right' });
 
@@ -285,7 +285,7 @@ export default function DiagnosticReportList({ reports, pets, clients, templates
         {reports.map((report) => {
           const pet = getPetInfo(report.pet_id);
           const client = getClientInfo(report.client_id);
-          const clientName = client ? `${client.first_name} ${client.last_name}` : 'Unknown TenantClient';
+          const clientName = client ? `${client.first_name} ${client.last_name}` : 'Unknown Client';
           const template = getTemplateInfo(report.template_id); // Get template info for display
           
           return (

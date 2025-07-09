@@ -80,14 +80,14 @@ export default function RecentAppointments({ appointments, pets, clients, loadin
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <h4 className="font-semibold text-gray-800 truncate">
-                        {client ? `${client.first_name} ${client.last_name}` : 'Unknown TenantClient'}
+                        {client ? `${client.first_name} ${client.last_name}` : 'Unknown Client'}
                       </h4>
                       <Badge className={statusColors[appointment.status] || statusColors.scheduled}>
                         {appointment.status?.replace(/_/g, ' ')}
                       </Badge>
                     </div>
                     <p className="text-sm text-gray-600 truncate">
-                      <span className="font-medium">{pet?.name || 'Unknown TenantPet'}</span> - {appointment.reason || appointment.service_type}
+                      <span className="font-medium">{pet?.name || 'Unknown Pet'}</span> - {appointment.reason || appointment.service_type}
                     </p>
                     <div className="flex items-center gap-4 text-xs text-gray-500 mt-1">
                       <span className="flex items-center gap-1">

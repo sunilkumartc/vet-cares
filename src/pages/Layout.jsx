@@ -378,7 +378,7 @@ export default function Layout({ children, currentPageName }) {
             <SidebarHeader>
               <div className="flex items-center gap-2 px-2">
                 <PawPrint className="w-6 h-6 text-purple-600" />
-                <h2 className="text-xl font-semibold text-gray-800">TenantPet Portal</h2>
+                <h2 className="text-xl font-semibold text-gray-800">Pet Portal</h2>
               </div>
             </SidebarHeader>
             <SidebarContent>

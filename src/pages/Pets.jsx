@@ -114,7 +114,7 @@ export default function Pets() {
         // Finally delete the pet
         await TenantPet.delete(pet.id);
         
-        alert('TenantPet and all related data deleted successfully.');
+        alert('Pet and all related data deleted successfully.');
         loadInitialData();
       }
     } catch (error) {

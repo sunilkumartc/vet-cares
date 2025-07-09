@@ -4,6 +4,7 @@ import { MongoClient, ObjectId } from 'mongodb';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fetch from 'node-fetch';
+import cron from 'node-cron';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -262,6 +263,26 @@ app.get('/api/:entity', async (req, res) => {
   }
 });
 
+app.get('/api/:entity/:id', async (req, res) => {
+  try {
+    const { entity, id } = req.params;
+    const { tenant_id } = req.query;
+    let objectId;
+    try {
+      objectId = new ObjectId(id);
+    } catch (e) {
+      return res.status(404).json({ error: `${entity} not found` });
+    }
+    const query = { _id: objectId };
+    if (tenant_id && tenant_id !== 'null' && tenant_id !== 'undefined') query.tenant_id = tenant_id;
+    const result = await db.collection(entity).findOne(query);
+    if (!result) return res.status(404).json({ error: `${entity} not found` });
+    res.json(formatResponse(result));
+  } catch (error) {
+    res.status(500).json({ error: `Failed to get ${req.params.entity}` });
+  }
+});
+
 app.post('/api/:entity', async (req, res) => {
   try {
     const { entity } = req.params;
@@ -316,6 +337,8 @@ app.delete('/api/:entity/:id', async (req, res) => {
     res.status(500).json({ error: `Failed to delete ${req.params.entity}` });
   }
 });
+
+
 
 // Tenant Management API
 app.get('/api/admin/tenants', async (req, res) => {
@@ -1044,6 +1067,219 @@ app.post('/api/vaccination/reminder', async (req, res) => {
   }
 });
 
+// WhatsApp Invoice API endpoint (backend proxy to avoid CORS)
+app.post('/api/whatsapp/send-invoice', async (req, res) => {
+  try {
+    const { phone, customer_name, amount, pdf_url, invoice_id, tenant_id } = req.body;
+    
+    // WhatsApp API configuration
+    const WHATSAPP_API_URL = 'https://publicapi.myoperator.co/chat/messages';
+    const WHATSAPP_TOKEN = 'bQBVcdNzGPIThEhPCRtKqISb0c7OrQnE5kVmvfqrfl';
+    const COMPANY_ID = '685ef0684b5ee840';
+    const PHONE_NUMBER_ID = '697547396774899';
+    
+    // Extract phone number (remove country code if present)
+    let phoneNumber = phone;
+    if (phoneNumber.startsWith('+91')) {
+      phoneNumber = phoneNumber.substring(3);
+    } else if (phoneNumber.startsWith('91')) {
+      phoneNumber = phoneNumber.substring(2);
+    }
+    
+    // Get tenant details if tenant_id is provided
+    let tenantDetails = {
+      clinicName: "VetVault",
+      contactPhone: "+91 1234567890"
+    };
+    
+    if (tenant_id) {
+      try {
+        const tenant = await db.collection("tenants").findOne({ 
+          _id: new ObjectId(tenant_id) 
+        });
+        if (tenant) {
+          tenantDetails = {
+            clinicName: tenant.name || tenant.clinic_name || "VetVault",
+            contactPhone: tenant.phone || tenant.contact_phone || "+91 1234567890"
+          };
+          console.log('Found tenant details for invoice:', tenantDetails.clinicName);
+        }
+      } catch (tenantError) {
+        console.warn('Could not fetch tenant for invoice:', tenantError.message);
+      }
+    }
+    
+    // Prepare the message payload
+    const payload = {
+      phone_number_id: PHONE_NUMBER_ID,
+      customer_country_code: "91",
+      customer_number: phoneNumber,
+      data: {
+        type: "template",
+        context: {
+          template_name: "send_bill",
+          language: "en",
+          body: {
+            customername: customer_name || "Customer",
+            amt: amount?.toString() || "0",
+            invoicelink: pdf_url || "",
+            clinicname: tenantDetails.clinicName,
+            clinicphone: tenantDetails.contactPhone
+          }
+        }
+      },
+      reply_to: null,
+      myop_ref_id: `invoice_${invoice_id || Date.now()}_${Date.now()}`
+    };
+    
+    console.log('WhatsApp API payload:', payload);
+    
+    const response = await fetch(WHATSAPP_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${WHATSAPP_TOKEN}`,
+        'X-MYOP-COMPANY-ID': COMPANY_ID
+      },
+      body: JSON.stringify(payload)
+    });
+    
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(`WhatsApp API error: ${result.message || response.statusText}`);
+    }
+    
+    console.log('WhatsApp API response:', result);
+    
+    res.json({
+      success: true,
+      messageId: result.message_id || result.id || `wa-msg-${Date.now()}`,
+      apiResponse: result
+    });
+  } catch (error) {
+    console.error('Error sending WhatsApp message:', error);
+    res.status(500).json({
+      success: false,
+      error: `Failed to send WhatsApp message: ${error.message}`
+    });
+  }
+});
+
+// Invoice PDF serving endpoint
+app.get('/api/invoice/:invoiceId/pdf', async (req, res) => {
+  try {
+    const { invoiceId } = req.params;
+    
+    // Get invoice from database
+    const collection = db.collection('invoices');
+    const invoice = await collection.findOne({ _id: new ObjectId(invoiceId) });
+    
+    if (!invoice) {
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
+    
+    // Get client and pet information
+    const clientCollection = db.collection('clients');
+    const petCollection = db.collection('pets');
+    
+    const [client, pet] = await Promise.all([
+      invoice.client_id ? clientCollection.findOne({ _id: new ObjectId(invoice.client_id) }) : null,
+      invoice.pet_id ? petCollection.findOne({ _id: new ObjectId(invoice.pet_id) }) : null
+    ]);
+    
+    // For now, return a simple HTML page with invoice details
+    // In production, you would generate and serve an actual PDF
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Invoice #${invoice.invoice_number}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 40px; }
+            .header { text-align: center; margin-bottom: 30px; }
+            .invoice-details { margin-bottom: 20px; }
+            .items { margin-bottom: 20px; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+            .total { text-align: right; font-weight: bold; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Dr. Ravi Pet Portal</h1>
+            <p>No. 32, 4th temple Street road, Malleshwaram, Bengaluru</p>
+            <p>Phone: 082961 43115</p>
+          </div>
+          
+          <div class="invoice-details">
+            <h2>INVOICE #${invoice.invoice_number}</h2>
+            <p><strong>Date:</strong> ${new Date(invoice.invoice_date).toLocaleDateString()}</p>
+            <p><strong>Status:</strong> ${invoice.status}</p>
+            
+            <div style="display: flex; justify-content: space-between;">
+              <div>
+                <h3>Bill To:</h3>
+                <p>${client ? `${client.first_name} ${client.last_name}` : 'Walk-in Customer'}</p>
+                <p>${client?.phone || 'N/A'}</p>
+                <p>${client?.email || 'N/A'}</p>
+              </div>
+              <div>
+                <h3>Patient:</h3>
+                <p>${pet ? pet.name : 'N/A'}</p>
+                <p>${pet ? pet.species : 'N/A'}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="items">
+            <table>
+              <thead>
+                <tr>
+                  <th>Service</th>
+                  <th>Qty</th>
+                  <th>Price</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${invoice.items ? invoice.items.map(item => `
+                  <tr>
+                    <td>${item.service}</td>
+                    <td>${item.quantity}</td>
+                    <td>₹${item.unit_price?.toFixed(2)}</td>
+                    <td>₹${item.total?.toFixed(2)}</td>
+                  </tr>
+                `).join('') : ''}
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="total">
+            <p>Subtotal: ₹${invoice.subtotal?.toFixed(2)}</p>
+            <p>Tax: ₹${invoice.tax_amount?.toFixed(2)}</p>
+            <p>Total: ₹${invoice.total_amount?.toFixed(2)}</p>
+          </div>
+          
+          <div style="margin-top: 30px; text-align: center;">
+            <p>Thank you for choosing Dr. Ravi Pet Portal!</p>
+            <p>For any queries, please contact us at 082961 43115</p>
+          </div>
+        </body>
+      </html>
+    `;
+    
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
+    
+  } catch (error) {
+    console.error('Error serving invoice PDF:', error);
+    res.status(500).json({ error: 'Failed to serve invoice PDF' });
+  }
+});
+
 // Serve React app
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
@@ -1054,4 +1290,21 @@ connectDB().then(() => {
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
+  
+  // Schedule vaccination reminders job to run daily at 9:00 AM
+  cron.schedule('0 9 * * *', async () => {
+    console.log('🕘 Running scheduled vaccination reminders job...');
+    try {
+      const { runVaccinationReminders } = await import('./src/jobs/sendVaccinationReminders.js');
+      await runVaccinationReminders();
+      console.log('✅ Scheduled vaccination reminders job completed');
+    } catch (error) {
+      console.error('❌ Scheduled vaccination reminders job failed:', error);
+    }
+  }, {
+    scheduled: true,
+    timezone: "Asia/Kolkata"
+  });
+  
+  console.log('📅 Vaccination reminders scheduled to run daily at 9:00 AM IST');
 }); 

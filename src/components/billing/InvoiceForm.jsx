@@ -147,7 +147,7 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <FileText className="w-5 h-5" />
-          {invoice ? 'Edit TenantInvoice' : 'Create TenantInvoice'}
+          {invoice ? 'Edit Invoice' : 'Create Invoice'}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -155,7 +155,7 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
           {/* Basic Information - Responsive Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="invoice_number">TenantInvoice Number</Label>
+              <Label htmlFor="invoice_number">Invoice Number</Label>
               <Input
                 id="invoice_number"
                 value={formData.invoice_number}
@@ -165,7 +165,7 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="client_id">TenantClient *</Label>
+              <Label htmlFor="client_id">Client *</Label>
               <Select
                 value={formData.client_id}
                 onValueChange={handleClientChange}
@@ -184,7 +184,7 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="pet_id">TenantPet *</Label>
+              <Label htmlFor="pet_id">Pet *</Label>
               <Select
                 value={formData.pet_id}
                 onValueChange={(value) => handleChange('pet_id', value)}
@@ -204,10 +204,10 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
             </div>
           </div>
 
-          {/* TenantInvoice Date Only */}
+          {/* Invoice Date Only */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>TenantInvoice Date *</Label>
+              <Label>Invoice Date *</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="w-full justify-start text-left font-normal">
@@ -227,10 +227,10 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
             </div>
           </div>
 
-          {/* TenantInvoice Items - Responsive */}
+          {/* Invoice Items - Responsive */}
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <h3 className="text-lg font-semibold">TenantInvoice Items</h3>
+              <h3 className="text-lg font-semibold">Invoice Items</h3>
               <Button type="button" onClick={addItem} variant="outline" className="gap-2">
                 <Plus className="w-4 h-4" />
                 Add Item
@@ -240,7 +240,7 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
             {formData.items.map((item, index) => (
               <Card key={index} className="p-4">
                 <div className="space-y-4">
-                  {/* Toggle between TenantProduct Search and Manual Entry */}
+                  {/* Toggle between Product Search and Manual Entry */}
                   <div className="flex items-center gap-2">
                     <Button
                       type="button"
@@ -254,7 +254,7 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
                       }`}
                     >
                       <Edit3 className="w-3 h-3 mr-1" />
-                      {item.is_manual ? 'Manual Entry' : 'TenantProduct Search'}
+                      {item.is_manual ? 'Manual Entry' : 'Product Search'}
                     </Button>
                     <span className="text-sm text-gray-600">
                       {item.is_manual ? 'Type custom service/item' : 'Search from product catalog'}
@@ -262,9 +262,9 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 items-end">
-                    {/* TenantProduct/Service Name */}
+                    {/* Product/Service Name */}
                     <div className="lg:col-span-2 space-y-2">
-                      <Label>Service / TenantProduct Name *</Label>
+                      <Label>Service / Product Name *</Label>
                       {item.is_manual ? (
                         <Input
                           placeholder="e.g., Consultation, Emergency Fee, Grooming"
@@ -345,7 +345,7 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
             ))}
           </div>
 
-          {/* TenantInvoice Totals & Other Details - Responsive */}
+          {/* Invoice Totals & Other Details - Responsive */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -371,11 +371,11 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
                 <div className="space-y-2">
                   <Label htmlFor="payment_method">Payment Method</Label>
                   <Select
-                    value={formData.payment_method || ''}
+                    value={formData.payment_method}
                     onValueChange={(value) => handleChange('payment_method', value)}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select payment method" />
+                      <SelectValue placeholder="Select payment method..." />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="cash">Cash</SelectItem>
@@ -383,6 +383,7 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
                       <SelectItem value="upi">UPI</SelectItem>
                       <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
                       <SelectItem value="cheque">Cheque</SelectItem>
+                      <SelectItem value="insurance">Insurance</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -463,7 +464,7 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
             </Button>
             <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
               <Save className="w-4 h-4 mr-2" />
-              {invoice ? 'Update TenantInvoice' : 'Create TenantInvoice'}
+              {invoice ? 'Update Invoice' : 'Create Invoice'}
             </Button>
           </div>
         </form>

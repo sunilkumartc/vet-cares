@@ -83,14 +83,14 @@ export default function MyPets() {
             await TenantPet.update(editingPet.id, petData);
         } else {
             if (!myClient || !myClient.id) {
-              throw new Error("TenantClient information not available. Cannot add pet.");
+              throw new Error("Client information not available. Cannot add pet.");
             }
             await TenantPet.create({ ...petData, client_id: myClient.id });
         }
         setShowPetForm(false);
         setEditingPet(null);
         await loadCustomerData();
-        alert('TenantPet saved successfully!');
+        alert('Pet saved successfully!');
     } catch (error) {
         console.error('Error saving pet:', error);
         alert(`Failed to save pet: ${error.message || 'Please try again.'}`);
@@ -100,7 +100,7 @@ export default function MyPets() {
   const handleAppointmentSuccess = () => {
     setShowAppointmentForm(false);
     loadCustomerData(); // Reload data to show new appointment
-    alert('TenantAppointment booked successfully!');
+    alert('Appointment booked successfully!');
   };
 
   const handleCancelPetForm = () => {
@@ -201,30 +201,20 @@ export default function MyPets() {
         ) : (
           <>
             {pets.length === 0 ? (
-              <Card className="text-center py-12 bg-white/60 backdrop-blur-sm border-pink-100">
-                <CardContent>
-                  <div className="w-20 h-20 bg-pink-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <PawPrint className="w-10 h-10 text-pink-400" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">No pets registered yet</h3>
-                  <p className="text-gray-600 mb-4">Add your first pet to get started!</p>
-                  <Button
-                    onClick={() => { setEditingPet(null); setShowPetForm(true); }}
-                    className="bg-gradient-to-r from-pink-500 to-purple-600 text-white"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Your TenantPet
-                  </Button>
-                </CardContent>
-              </Card>
+              <div className="text-center py-12">
+                <PawPrint className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+                <h3 className="text-xl font-semibold text-gray-800 mb-2">Add Your Pet</h3>
+                <p className="text-gray-600 mb-4">Start by adding your first pet to get personalized care.</p>
+                <Button onClick={() => setShowPetForm(true)} className="bg-blue-600 hover:bg-blue-700">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Pet
+                </Button>
+              </div>
             ) : (
-              <div>
-                {/* TenantPet Selector */}
-                <div className="mb-8">
-                   <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                      <PawPrint className="w-5 h-5 text-pink-500" />
-                      Select a TenantPet
-                    </h2>
+              <div className="space-y-6">
+                {/* Pet Selector */}
+                <div className="bg-white rounded-lg shadow p-6">
+                  <h3 className="text-lg font-semibold mb-4">Select a Pet</h3>
                   <div className="flex flex-wrap gap-3">
                     {pets.map(pet => (
                       <Button
@@ -239,7 +229,7 @@ export default function MyPets() {
                   </div>
                 </div>
                 
-                {/* TenantPet Details and Timeline */}
+                {/* Pet Details and Timeline */}
                 {selectedPet && (
                     <div className="space-y-8">
                         <PetDetailsCard pet={selectedPet} onEdit={handleEditClick} onBookAppointment={handleBookAppointmentClick} />

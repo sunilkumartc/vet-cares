@@ -100,7 +100,7 @@ export default function MyInvoices() {
                     <div key={invoice.id} className="p-6 hover:bg-gray-50 transition-colors">
                       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                         <div className="flex-1">
-                          <p className="font-semibold text-lg text-gray-800">TenantInvoice #{invoice.invoice_number}</p>
+                          <p className="font-semibold text-lg text-gray-800">Invoice #{invoice.invoice_number}</p>
                           <p className="text-gray-600 text-sm">
                             For {pet?.name || 'General Services'} on {format(new Date(invoice.invoice_date), "dd-MM-yyyy")}
                           </p>

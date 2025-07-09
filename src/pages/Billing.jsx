@@ -217,7 +217,7 @@ export default function Billing() {
           className="bg-blue-600 hover:bg-blue-700 gap-2"
         >
           <Plus className="w-4 h-4" />
-          Create TenantInvoice
+          Create Invoice
         </Button>
       </div>
 

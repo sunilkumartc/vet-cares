@@ -72,8 +72,8 @@ export default function PetInsurancePage() {
                 <Heart className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">Dr. Ravi TenantPet Portal</h1>
-                <p className="text-xs text-gray-500">TenantPet Insurance</p>
+                <h1 className="text-xl font-bold text-gray-900">Dr. Ravi Pet Portal</h1>
+                <p className="text-xs text-gray-500">Pet Insurance</p>
               </div>
             </Link>
             <a href="tel:08296143115">
@@ -90,21 +90,17 @@ export default function PetInsurancePage() {
       <section className="relative bg-blue-50">
         <div className="max-w-6xl mx-auto px-6 py-20 flex flex-col md:flex-row items-center gap-8">
             <div className="md:w-1/2 text-center md:text-left">
-                <h1 className="text-4xl md:text-5xl font-extrabold text-blue-900 tracking-tight">Secure Your TenantPet's Health & Your Wallet</h1>
-                <p className="mt-4 max-w-2xl text-lg text-gray-600">
-                    With comprehensive pet insurance, you can provide the best medical care for your furry family member without worrying about the cost.
+                <h1 className="text-4xl md:text-5xl font-extrabold text-blue-900 tracking-tight">Secure Your Pet's Health & Your Wallet</h1>
+                <p className="mt-4 max-w-3xl mx-auto text-lg md:text-xl text-blue-800">
+                  Comprehensive pet insurance coverage that protects your furry family members and your finances. Get peace of mind knowing your pets are covered for accidents, illnesses, and routine care.
                 </p>
-                <div className="mt-8 flex flex-col sm:flex-row justify-center md:justify-start gap-4">
-                    <a href="tel:08296143115">
-                        <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg w-full sm:w-auto">
-                            <Phone className="w-5 h-5 mr-2" /> Enquire Now
-                        </Button>
-                    </a>
-                    <a href="#coverage">
-                        <Button size="lg" variant="outline" className="w-full sm:w-auto">
-                           View Coverage
-                        </Button>
-                    </a>
+                <div className="mt-8 flex flex-col sm:flex-row justify-center gap-4">
+                  <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg">
+                    Get Quote Now
+                  </Button>
+                  <Button size="lg" variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50">
+                    Learn More
+                  </Button>
                 </div>
             </div>
             <div className="md:w-1/2">
@@ -117,7 +113,7 @@ export default function PetInsurancePage() {
       <section className="py-16 md:py-24 bg-white">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold">Why TenantPet Insurance is a Smart Choice</h2>
+            <h2 className="text-3xl md:text-4xl font-bold">Why Pet Insurance is a Smart Choice</h2>
             <p className="mt-2 text-gray-600">Prepare for the unexpected and ensure your pet always gets the care they deserve.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -200,7 +196,7 @@ export default function PetInsurancePage() {
       {/* Footer */}
       <footer className="bg-gray-800 text-white py-8">
         <div className="max-w-6xl mx-auto px-6 text-center text-gray-400">
-           <p>© {new Date().getFullYear()} Dr. Ravi TenantPet Portal. All Rights Reserved.</p>
+           <p>© {new Date().getFullYear()} Dr. Ravi Pet Portal. All Rights Reserved.</p>
            <p className="text-sm mt-2">Caring for the pets of Malleshwaram, Bengaluru with love and expertise.</p>
         </div>
       </footer>

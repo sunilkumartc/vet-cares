@@ -258,33 +258,42 @@ export default function MedicalRecordForm({ record, pets, clients, veterinarians
           </CardTitle>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
             <div className="space-y-2">
-              <Label htmlFor="client_id">TenantClient *</Label>
-              <Combobox
-                options={(clients || []).map(c => ({ value: c.id, label: `${c.first_name} ${c.last_name}` }))}
+              <Label htmlFor="client_id">Client *</Label>
+              <Select
                 value={formData.client_id}
-                onValueChange={handleClientChange}
-                placeholder="Select client..."
-                disabled={clients?.length === 1}
-                searchPlaceholder="Search clients..."
-                emptyPlaceholder="No client found."
-              />
+                onValueChange={(value) => handleChange('client_id', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a client" />
+                </SelectTrigger>
+                <SelectContent>
+                  {clients.map((client) => (
+                    <SelectItem key={client.id} value={client.id}>
+                      {client.first_name} {client.last_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="pet_id">TenantPet *</Label>
-              <Combobox
-                options={(availablePets || []).map(p => ({ value: p.id, label: p.name }))}
+              <Label htmlFor="pet_id">Pet *</Label>
+              <Select
                 value={formData.pet_id}
                 onValueChange={(value) => handleChange('pet_id', value)}
-                placeholder={!formData.client_id ? "Select client first" : "Select pet..."}
-                disabled={!formData.client_id}
-                searchPlaceholder="Search pets..."
-                emptyPlaceholder="No pet found."
-                searchFilter={(value, search) => {
-                  // Case-insensitive search for pet names with null checks
-                  if (!value || !value.label || !search) return true;
-                  return value.label.toLowerCase().includes(search.toLowerCase());
-                }}
-              />
+                disabled={!formData.client_id || availablePets.length === 0}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={!formData.client_id ? "Select a client first" : "Select a pet"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {availablePets.map((pet) => (
+                    <SelectItem key={pet.id} value={pet.id}>
+                      {pet.name} ({pet.species})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Replaced visit date input with Popover Calendar */}

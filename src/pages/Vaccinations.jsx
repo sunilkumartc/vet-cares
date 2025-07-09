@@ -112,15 +112,15 @@ export default function Vaccinations() {
     <div className="p-4 md:p-8 space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-            <Syringe className="w-8 h-8" />
-            TenantVaccination Management
-          </h1>
-          <p className="text-gray-600 mt-1">Track and manage all pet vaccinations and due dates.</p>
+          <h1 className="text-3xl font-bold text-gray-900">Vaccination Management</h1>
+          <p className="text-gray-600 mt-1">Track and manage pet vaccinations</p>
         </div>
-        <Button onClick={() => setShowForm(true)} className="bg-blue-600 hover:bg-blue-700">
-          <Plus className="w-4 h-4 mr-2" />
-          Add TenantVaccination Record
+        <Button 
+          onClick={() => { setEditingVaccination(null); setShowForm(true); }}
+          className="bg-blue-600 hover:bg-blue-700 gap-2"
+        >
+          <Plus className="w-4 h-4" />
+          Add Vaccination Record
         </Button>
       </div>
 

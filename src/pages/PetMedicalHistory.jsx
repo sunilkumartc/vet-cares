@@ -133,7 +133,7 @@ export default function PetMedicalHistory() {
   if (!pet) {
     return (
       <div className="p-8 text-center">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">TenantPet Not Found</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">Pet Not Found</h2>
         <p className="text-gray-600 mb-6">The pet you are looking for could not be found. It might have been deleted or the ID is incorrect.</p>
         <Link to={createPageUrl('Pets')}>
           <Button>Back to Pets</Button>
@@ -179,7 +179,7 @@ export default function PetMedicalHistory() {
           </div>
         </div>
 
-        {/* TenantPet Summary Card */}
+        {/* Pet Summary Card */}
         <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
           <CardContent className="p-6">
             <div className="flex items-center gap-6">
@@ -372,7 +372,7 @@ export default function PetMedicalHistory() {
           <div className="space-y-4">
             <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
               <Pill className="w-6 h-6 text-green-600" />
-              TenantVaccination History
+              Vaccination History
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {vaccinations.map((vaccine) => (

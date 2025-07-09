@@ -73,9 +73,9 @@ export default function UpcomingVaccinations({ vaccinations, pets, clients, load
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-800 text-sm truncate">{client ? `${client.first_name} ${client.last_name}` : 'Unknown TenantClient'}</p>
+                    <p className="font-semibold text-gray-800 text-sm truncate">{client ? `${client.first_name} ${client.last_name}` : 'Unknown Client'}</p>
                     <p className="text-xs text-gray-600 truncate">
-                      <span className="font-medium">{pet?.name || 'Unknown TenantPet'}</span> - {vaccination.vaccine_name}
+                      <span className="font-medium">{pet?.name || 'Unknown Pet'}</span> - {vaccination.vaccine_name}
                     </p>
                     <p className={`text-xs ${isOverdue ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
                       Due: {format(dueDate, 'MMM d, yyyy')}

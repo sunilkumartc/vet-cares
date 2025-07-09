@@ -91,10 +91,7 @@ export default function AppointmentBookingForm({ pets, selectedPet, onSuccess, o
   return (
     <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-2xl">
       <CardHeader className="bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-t-lg">
-        <CardTitle className="flex items-center gap-2">
-          <Heart className="w-5 h-5" />
-          Book TenantAppointment for Your TenantPet
-        </CardTitle>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Book Appointment for Your Pet</h3>
       </CardHeader>
       <CardContent className="p-6">
         <form onSubmit={handleSubmit} className="space-y-6">

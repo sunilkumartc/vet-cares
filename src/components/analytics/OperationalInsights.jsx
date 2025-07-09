@@ -164,19 +164,27 @@ export default function OperationalInsights({ appointments, clients, pets }) {
           </div>
         </div>
 
-        {/* TenantClient Retention */}
-        <div>
-          <h4 className="text-sm font-medium text-gray-700 mb-3">TenantClient Visit Patterns</h4>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={insights.retentionChart}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="category" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="count" fill="#8B5CF6" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+        {/* Client Retention */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5" />
+              Client Retention
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <h4 className="text-sm font-medium text-gray-700 mb-3">Client Visit Patterns</h4>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={insights.retentionChart}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="category" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="count" fill="#8B5CF6" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
       </CardContent>
     </Card>
   );

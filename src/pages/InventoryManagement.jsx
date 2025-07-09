@@ -11,7 +11,7 @@ import BulkImport from "../components/inventory/BulkImport";
 import ReceiveShipment from "../components/inventory/ReceiveShipment";
 
 const inventoryViews = [
-  { value: "catalog", label: "TenantProduct Catalog", icon: Package, component: <ProductCatalog /> },
+  { value: "catalog", label: "Product Catalog", icon: Package, component: <ProductCatalog /> },
   { value: "batches", label: "Batch Management", icon: FileSpreadsheet, component: <BatchManagement /> },
   { value: "stock-levels", label: "Stock Levels", icon: TrendingDown, component: <StockLevels /> },
   { value: "expiry-alerts", label: "Expiry Alerts", icon: AlertTriangle, component: <ExpiryAlerts /> },

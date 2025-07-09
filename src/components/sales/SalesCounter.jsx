@@ -82,7 +82,7 @@ export default function SalesCounter() {
       const availableBatches = getAvailableBatches(product.id);
       
       if (availableBatches.length === 0) {
-        alert('TenantProduct is out of stock');
+        alert('Product is out of stock');
         return;
       }
 
@@ -257,15 +257,15 @@ export default function SalesCounter() {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* TenantProduct Search and Customer Selection */}
+      {/* Product Search and Customer Selection */}
       <div className="lg:col-span-2 space-y-6">
-        {/* TenantProduct Search */}
+        {/* Product Search */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2">
                 <Search className="w-5 h-5" />
-                TenantProduct Search
+                Product Search
               </CardTitle>
               <Button 
                 variant="outline" 

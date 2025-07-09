@@ -115,7 +115,7 @@ export default function MedicalRecordList({ records, pets, clients, loading, onE
                     <div>
                       <div className="flex items-center gap-2">
                         <PawPrint className="w-4 h-4 text-gray-500" />
-                        <h3 className="text-lg font-semibold text-gray-900">{pet?.name || 'Unknown TenantPet'}</h3>
+                        <h3 className="text-lg font-semibold text-gray-900">{pet?.name || 'Unknown Pet'}</h3>
                       </div>
                       <div className="flex items-center gap-2 text-sm text-gray-600">
                         <User className="w-4 h-4" />

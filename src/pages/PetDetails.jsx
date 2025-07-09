@@ -139,8 +139,11 @@ export default function PetDetails() {
           <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
             <CardContent className="text-center py-12">
               <PawPrint className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">TenantPet not found</h3>
-              <p className="text-gray-600">The pet you're looking for doesn't exist.</p>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Pet not found</h3>
+              <p>The pet you are looking for does not exist.</p>
+              <Link to={createPageUrl("Pets")}>
+                <Button variant="outline" className="mt-4">Go Back</Button>
+              </Link>
             </CardContent>
           </Card>
         </div>
@@ -160,7 +163,7 @@ export default function PetDetails() {
             </Button>
           </Link>
 
-          {/* TenantPet Profile Card */}
+          {/* Pet Profile Card */}
           <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg overflow-hidden">
             <div className="h-32 bg-gradient-to-r from-pink-400 to-purple-500 relative">
               {pet.photo_url && (
@@ -211,7 +214,7 @@ export default function PetDetails() {
                     
                     {pet.pet_id && (
                       <div className="text-center bg-gray-100 rounded-lg p-3">
-                        <div className="text-sm text-gray-500">TenantPet ID</div>
+                        <div className="text-sm text-gray-500">Pet ID</div>
                         <div className="font-mono font-bold text-lg text-gray-900">{pet.pet_id}</div>
                       </div>
                     )}
@@ -219,12 +222,12 @@ export default function PetDetails() {
                 </div>
               </div>
 
-              {/* TenantPet Details */}
+              {/* Pet Details */}
               <div className="grid md:grid-cols-2 gap-6 mt-6 pt-6 border-t border-gray-200">
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
                     <PawPrint className="w-4 h-4 text-pink-500" />
-                    TenantPet Information
+                    Pet Information
                   </h3>
                   <div className="space-y-2 text-sm">
                     {pet.color && (

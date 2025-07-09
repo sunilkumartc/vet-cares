@@ -22,13 +22,13 @@ export default function ReportTemplateSettings({ templates, onSubmit }) {
   const getDefaultTemplate = () => ({
     template_name: "",
     report_type: "cytology",
-    clinic_name: "Dr. Ravi TenantPet Portal",
+    clinic_name: "Dr. Ravi Pet Portal",
     clinic_address: "No. 32, 4th temple Street road, Malleshwaram, Bengaluru",
     clinic_phone: "082961 43115",
-    clinic_email: "info@drravipetportal.com",
+    clinic_email: "dr.ravi@example.com",
     logo_url: "",
     header_text: "",
-    footer_text: "Thank you for choosing Dr. Ravi TenantPet Portal for your pet's diagnostic needs.",
+    footer_text: "Thank you for choosing Dr. Ravi Pet Portal for your pet's diagnostic needs.",
     signature_fields: [
       {
         title: "Veterinary Pathologist",

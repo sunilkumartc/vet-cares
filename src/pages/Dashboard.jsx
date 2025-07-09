@@ -210,7 +210,7 @@ export default function Dashboard() {
               <Button variant="outline" className="w-full justify-start gap-2 h-auto py-4">
                 <DollarSign className="w-5 h-5" />
                 <div className="text-left">
-                  <div className="font-medium">Create TenantInvoice</div>
+                  <div className="font-medium">Create Invoice</div>
                   <div className="text-sm text-gray-500">Generate a new bill</div>
                 </div>
               </Button>

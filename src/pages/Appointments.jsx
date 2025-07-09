@@ -108,7 +108,7 @@ export default function Appointments() {
     if (confirm(confirmMessage)) {
       try {
         await TenantAppointment.delete(appointment.id);
-        alert('TenantAppointment deleted successfully.');
+        alert('Appointment deleted successfully.');
         loadInitialData();
       } catch (error) {
         console.error('Error deleting appointment:', error);

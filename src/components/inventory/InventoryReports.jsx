@@ -356,7 +356,7 @@ export default function InventoryReports() {
                   <table className="w-full border-collapse border border-gray-200">
                     <thead>
                       <tr className="bg-gray-50">
-                        <th className="border border-gray-200 p-2 text-left">TenantProduct</th>
+                        <th className="border border-gray-200 p-2 text-left">Product</th>
                         <th className="border border-gray-200 p-2 text-left">Category</th>
                         <th className="border border-gray-200 p-2 text-left">Current Stock</th>
                         <th className="border border-gray-200 p-2 text-left">Reorder Point</th>
@@ -424,7 +424,7 @@ export default function InventoryReports() {
                     <table className="w-full border-collapse border border-gray-200">
                       <thead>
                         <tr className="bg-gray-50">
-                          <th className="border border-gray-200 p-2 text-left">TenantProduct</th>
+                          <th className="border border-gray-200 p-2 text-left">Product</th>
                           <th className="border border-gray-200 p-2 text-left">Batch ID</th>
                           <th className="border border-gray-200 p-2 text-left">Expiry Date</th>
                           <th className="border border-gray-200 p-2 text-left">Days to Expiry</th>
@@ -477,7 +477,7 @@ export default function InventoryReports() {
                       <thead>
                         <tr className="bg-gray-50">
                           <th className="border border-gray-200 p-2 text-left">Category</th>
-                          <th className="border border-gray-200 p-2 text-left">TenantProduct Count</th>
+                          <th className="border border-gray-200 p-2 text-left">Product Count</th>
                           <th className="border border-gray-200 p-2 text-left">Total Stock</th>
                           <th className="border border-gray-200 p-2 text-left">Total Value</th>
                         </tr>
