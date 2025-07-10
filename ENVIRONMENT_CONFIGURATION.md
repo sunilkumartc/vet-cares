@@ -55,16 +55,16 @@ This document summarizes the migration of hardcoded configuration values to envi
 Contains all current configuration values:
 ```bash
 # AWS S3 Configuration
-AWS_S3_ACCESS_KEY_ID=AKIA457W7TET5LOMDM6H
-AWS_S3_SECRET_ACCESS_KEY=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
+AWS_S3_ACCESS_KEY_ID=
+AWS_S3_SECRET_ACCESS_KEY=
 AWS_S3_BUCKET=vetinvoice
 AWS_S3_REGION=eu-north-1
 
 # WhatsApp API Configuration
 WHATSAPP_API_URL=https://publicapi.myoperator.co/chat/messages
-WHATSAPP_TOKEN=bQBVcdNzGPIThEhPCRtKqISb0c7OrQnE5kVmvfqrfl
-WHATSAPP_COMPANY_ID=685ef0684b5ee840
-WHATSAPP_PHONE_NUMBER_ID=697547396774899
+WHATSAPP_TOKEN=
+WHATSAPP_COMPANY_ID=
+WHATSAPP_PHONE_NUMBER_ID=
 
 # MongoDB Configuration
 MONGODB_URI=mongodb://localhost:27017
