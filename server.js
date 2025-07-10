@@ -1,3 +1,6 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
 import { MongoClient, ObjectId } from 'mongodb';
@@ -344,10 +347,10 @@ app.post('/api/upload-to-s3', s3Upload.single('file'), async (req, res) => {
     }
 
     // AWS S3 Configuration
-    const AWS_S3_ACCESS_KEY_ID = 'AKIA457W7TET5LOMDM6H';
-    const AWS_S3_SECRET_ACCESS_KEY = '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';
-    const AWS_S3_REGION = 'eu-north-1';
-    const AWS_S3_BUCKET = 'vetinvoice';
+    const AWS_S3_ACCESS_KEY_ID = process.env.AWS_S3_ACCESS_KEY_ID;
+    const AWS_S3_SECRET_ACCESS_KEY = process.env.AWS_S3_SECRET_ACCESS_KEY;
+    const AWS_S3_REGION = process.env.AWS_S3_REGION || 'eu-north-1';
+    const AWS_S3_BUCKET = process.env.AWS_S3_BUCKET || 'vetinvoice';
 
     console.log('AWS S3 Config:', {
       region: AWS_S3_REGION,
@@ -441,10 +444,10 @@ app.post('/api/upload-to-s3', s3Upload.single('file'), async (req, res) => {
 app.post('/api/test-s3', async (req, res) => {
   try {
     // AWS S3 Configuration
-    const AWS_S3_ACCESS_KEY_ID = 'AKIA457W7TET5LOMDM6H';
-    const AWS_S3_SECRET_ACCESS_KEY = '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';
-    const AWS_S3_REGION = 'eu-north-1';
-    const AWS_S3_BUCKET = 'vetinvoice';
+    const AWS_S3_ACCESS_KEY_ID = process.env.AWS_S3_ACCESS_KEY_ID;
+    const AWS_S3_SECRET_ACCESS_KEY = process.env.AWS_S3_SECRET_ACCESS_KEY;
+    const AWS_S3_REGION = process.env.AWS_S3_REGION || 'eu-north-1';
+    const AWS_S3_BUCKET = process.env.AWS_S3_BUCKET || 'vetinvoice';
 
     const s3 = new AWS.S3({
       accessKeyId: AWS_S3_ACCESS_KEY_ID,
@@ -1557,10 +1560,10 @@ app.post('/api/whatsapp/send-invoice', async (req, res) => {
     }
     
     // WhatsApp API configuration
-    const WHATSAPP_API_URL = 'https://publicapi.myoperator.co/chat/messages';
-    const WHATSAPP_TOKEN = 'bQBVcdNzGPIThEhPCRtKqISb0c7OrQnE5kVmvfqrfl';
-    const COMPANY_ID = '685ef0684b5ee840';
-    const PHONE_NUMBER_ID = '697547396774899';
+    const WHATSAPP_API_URL = process.env.WHATSAPP_API_URL || 'https://publicapi.myoperator.co/chat/messages';
+    const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN || 'bQBVcdNzGPIThEhPCRtKqISb0c7OrQnE5kVmvfqrfl';
+    const COMPANY_ID = process.env.WHATSAPP_COMPANY_ID || '685ef0684b5ee840';
+    const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID || '697547396774899';
     
     // Extract phone number (remove country code if present)
     let phoneNumber = phone;

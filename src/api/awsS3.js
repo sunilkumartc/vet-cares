@@ -4,10 +4,13 @@
 // The backend handles the actual AWS SDK integration
 
 // AWS S3 Configuration
-const AWS_S3_ACCESS_KEY_ID = 'AKIA457W7TET5LOMDM6H';
-const AWS_S3_SECRET_ACCESS_KEY = '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';
+// Note: Frontend doesn't need AWS credentials - all S3 operations go through backend API
+// These are only used for URL generation and fallback values
 const AWS_S3_BUCKET = 'vetinvoice';
 const AWS_S3_REGION = 'eu-north-1';
+
+// Check if we're in a browser environment
+const isBrowser = typeof window !== 'undefined';
 
 // Upload file to AWS S3 with public-read ACL via backend API
 export const uploadToS3 = async (file, fileName) => {
@@ -125,21 +128,28 @@ export const generateInvoiceFileName = (invoiceNumber, tenantId) => {
   return `invoices/${tenantId}/${sanitizedInvoiceNumber}_${timestamp}.pdf`;
 };
 
-// Real S3 upload implementation (for backend use)
+// Real S3 upload implementation (for backend use only)
+// This function should not be used on the frontend
 export const uploadToS3Real = async (fileBuffer, fileName, contentType = 'application/pdf') => {
   try {
     console.log('Real S3 upload starting:', { fileName, contentType, fileSize: fileBuffer.length });
     
-    // Use AWS SDK for S3
+    // This function should only be used on the backend
+    // Frontend should use uploadToS3() which calls the backend API
+    if (isBrowser) {
+      throw new Error('uploadToS3Real should not be called from frontend. Use uploadToS3() instead.');
+    }
+    
+    // Use AWS SDK for S3 (backend only)
     const AWS = require('aws-sdk');
     const s3 = new AWS.S3({
-      accessKeyId: AWS_S3_ACCESS_KEY_ID,
-      secretAccessKey: AWS_S3_SECRET_ACCESS_KEY,
-      region: AWS_S3_REGION
+      accessKeyId: process.env.AWS_S3_ACCESS_KEY_ID,
+      secretAccessKey: process.env.AWS_S3_SECRET_ACCESS_KEY,
+      region: process.env.AWS_S3_REGION || AWS_S3_REGION
     });
     
     const params = {
-      Bucket: AWS_S3_BUCKET,
+      Bucket: process.env.AWS_S3_BUCKET || AWS_S3_BUCKET,
       Key: fileName,
       Body: fileBuffer,
       ACL: 'public-read',  // 👈 key part for public access
@@ -158,13 +168,13 @@ export const uploadToS3Real = async (fileBuffer, fileName, contentType = 'applic
     
     console.log('S3 upload successful:', result);
     
-    const publicUrl = `https://${AWS_S3_BUCKET}.s3.${AWS_S3_REGION}.amazonaws.com/${fileName}`;
+    const publicUrl = `https://${params.Bucket}.s3.${params.region || AWS_S3_REGION}.amazonaws.com/${fileName}`;
     
     return {
       success: true,
       url: publicUrl,
       fileName: fileName,
-      bucket: AWS_S3_BUCKET,
+      bucket: params.Bucket,
       isPublic: true,
       acl: 'public-read',
       etag: result.ETag
