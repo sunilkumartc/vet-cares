@@ -7,8 +7,8 @@ This document describes the AWS S3 integration that replaces Cloudflare R2 for i
 
 ### AWS S3 Credentials
 ```javascript
-AWS_S3_ACCESS_KEY_ID = 'AKIA457W7TET5LOMDM6H'
-AWS_S3_SECRET_ACCESS_KEY = '608Pye4E/maOHKCYC8O3gUbep/e+9Td+ffwjfior'
+AWS_S3_ACCESS_KEY_ID = ''
+AWS_S3_SECRET_ACCESS_KEY = ''
 AWS_S3_BUCKET = 'vetinvoice'
 AWS_S3_REGION = 'eu-north-1'
 ```
