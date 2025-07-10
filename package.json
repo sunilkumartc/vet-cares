@@ -20,7 +20,8 @@
     "vaccination-reminders": "node scripts/run-vaccination-reminders.js",
     "setup:test-vaccination": "node scripts/setup-test-vaccination-data.js",
     "setup:elasticsearch": "node scripts/setup-elasticsearch.js",
-    "test:soap-autocomplete": "node scripts/test-soap-autocomplete.js"
+    "test:soap-autocomplete": "node scripts/test-soap-autocomplete.js",
+    "test:s3-upload": "node test-s3-upload-node.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^4.1.2",

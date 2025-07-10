@@ -1,0 +1,54 @@
+version: '3.8'
+services:
+  mongo:
+    image: mongo:6
+    restart: always
+    ports:
+      - 27017:27017
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - 9200:9200
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    depends_on:
+      mongo:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=production
+      - MONGO_URI=mongodb://mongo:27017/vet-cares
+      - ES_URL=http://elasticsearch:9200
+      - PORT=3001
+    ports:
+      - 3001:3001
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/soap/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mongo_data:
+  es_data: 

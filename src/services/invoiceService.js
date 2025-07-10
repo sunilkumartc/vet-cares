@@ -1,6 +1,6 @@
-// Invoice sending service - combines PDF generation, R2 upload, and WhatsApp sending
+// Invoice sending service - combines PDF generation, S3 upload, and WhatsApp sending
 import { generateInvoicePDF } from '../utils/invoicePdfGenerator.js';
-import { uploadToR2, generateInvoiceFileName } from '../api/cloudflareR2.js';
+import { uploadToS3, generateInvoiceFileName } from '../api/awsS3.js';
 import { sendInvoiceViaWhatsApp, sendInvoiceDocumentViaWhatsApp } from '../api/whatsapp.js';
 import { TenantInvoice, TenantClient, TenantPet } from '../api/tenant-entities.js';
 import { TenantManager } from '../lib/tenant.js';
@@ -23,23 +23,29 @@ export const sendInvoice = async (invoiceId) => {
     console.log('Generating PDF for invoice:', invoice.invoice_number);
     const pdfDoc = await generateInvoicePDF(invoice, client, pet);
     
-    // Convert PDF to blob
+    // Convert PDF to blob and then to File
     const pdfBlob = pdfDoc.output('blob');
+    console.log('PDF blob created:', { size: pdfBlob.size, type: pdfBlob.type });
+    
     const pdfFile = new File([pdfBlob], `Invoice_${invoice.invoice_number}.pdf`, {
       type: 'application/pdf'
     });
+    console.log('PDF file created:', { name: pdfFile.name, size: pdfFile.size, type: pdfFile.type });
 
-    // 3. Upload PDF to R2 and get public URL
-    console.log('Uploading PDF to R2...');
+    // 3. Upload PDF to S3 and get public URL
+    console.log('Uploading PDF to S3...');
     const tenant = TenantManager.getCurrentTenant();
     const fileName = generateInvoiceFileName(invoice.invoice_number, tenant?.slug || 'default');
+    console.log('Generated filename:', fileName);
     
-    // Upload to R2 and get public URL
-    const uploadResult = await uploadToR2(pdfFile, fileName);
+    // Upload to S3 with public-read ACL and get public URL
+    const uploadResult = await uploadToS3(pdfFile, fileName);
     
     if (!uploadResult.success) {
-      throw new Error('Failed to upload PDF to R2');
+      throw new Error('Failed to upload PDF to S3');
     }
+    
+    console.log('PDF uploaded to S3 with public-read ACL:', uploadResult.url);
     
     // 4. Update invoice with PDF URL and mark as sent
     const updatedInvoice = await TenantInvoice.update(invoiceId, {
@@ -48,7 +54,7 @@ export const sendInvoice = async (invoiceId) => {
       status: 'sent'
     });
 
-    // 5. Send via WhatsApp with public R2 URL
+    // 5. Send via WhatsApp with public S3 URL
     console.log('Sending invoice via WhatsApp...');
     let whatsappResult;
     
@@ -69,7 +75,13 @@ export const sendInvoice = async (invoiceId) => {
       invoice: updatedInvoice,
       pdfUrl: uploadResult.url,
       whatsappResult: whatsappResult,
-      message: 'Invoice sent successfully!'
+      message: 'Invoice sent successfully!',
+      storage: {
+        provider: 'AWS S3',
+        bucket: uploadResult.bucket,
+        acl: uploadResult.acl,
+        isPublic: uploadResult.isPublic
+      }
     };
 
   } catch (error) {

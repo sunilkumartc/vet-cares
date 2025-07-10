@@ -44,8 +44,52 @@ export const sendWhatsAppDocument = async (data) => {
 };
 
 export const generateInvoicePDF = async (data) => {
-  console.log('Mock invoice PDF generated:', data);
-  return { url: `https://mock-storage.com/invoice-${Date.now()}.pdf` };
+  console.log('Generating invoice PDF and uploading to AWS S3:', data);
+  
+  try {
+    // Generate PDF content (this would be your actual PDF generation logic)
+    const pdfContent = `Invoice PDF content for ${data.invoice_number || 'invoice'}`;
+    const fileName = `invoice/${data.invoice_number || `invoice-${Date.now()}`}.pdf`;
+    
+    // Convert string to buffer
+    const fileBuffer = Buffer.from(pdfContent, 'utf8');
+    
+    // Create FormData for upload
+    const formData = new FormData();
+    const blob = new Blob([fileBuffer], { type: 'application/pdf' });
+    formData.append('file', blob, fileName);
+    formData.append('fileName', fileName);
+    formData.append('contentType', 'application/pdf');
+    
+    // Upload to S3 via backend API
+    const response = await fetch('/api/upload-to-s3', {
+      method: 'POST',
+      body: formData
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `Upload failed with status ${response.status}`);
+    }
+    
+    const result = await response.json();
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Upload failed');
+    }
+    
+    console.log('Invoice PDF uploaded to S3 successfully:', result);
+    
+    return { 
+      url: result.url,
+      fileName: result.fileName,
+      bucket: result.bucket,
+      isPublic: result.isPublic
+    };
+  } catch (error) {
+    console.error('Error generating and uploading invoice PDF:', error);
+    throw new Error(`Failed to generate invoice PDF: ${error.message}`);
+  }
 };
 
 export const sendExternalEmail = async (data) => {
@@ -54,8 +98,52 @@ export const sendExternalEmail = async (data) => {
 };
 
 export const generateSalesReceipt = async (data) => {
-  console.log('Mock sales receipt generated:', data);
-  return { url: `https://mock-storage.com/receipt-${Date.now()}.pdf` };
+  console.log('Generating sales receipt and uploading to AWS S3:', data);
+  
+  try {
+    // Generate PDF content (this would be your actual PDF generation logic)
+    const pdfContent = `Sales receipt content for ${data.receipt_number || 'receipt'}`;
+    const fileName = `receipts/${data.receipt_number || `receipt-${Date.now()}`}.pdf`;
+    
+    // Convert string to buffer
+    const fileBuffer = Buffer.from(pdfContent, 'utf8');
+    
+    // Create FormData for upload
+    const formData = new FormData();
+    const blob = new Blob([fileBuffer], { type: 'application/pdf' });
+    formData.append('file', blob, fileName);
+    formData.append('fileName', fileName);
+    formData.append('contentType', 'application/pdf');
+    
+    // Upload to S3 via backend API
+    const response = await fetch('/api/upload-to-s3', {
+      method: 'POST',
+      body: formData
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `Upload failed with status ${response.status}`);
+    }
+    
+    const result = await response.json();
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Upload failed');
+    }
+    
+    console.log('Sales receipt uploaded to S3 successfully:', result);
+    
+    return { 
+      url: result.url,
+      fileName: result.fileName,
+      bucket: result.bucket,
+      isPublic: result.isPublic
+    };
+  } catch (error) {
+    console.error('Error generating and uploading sales receipt:', error);
+    throw new Error(`Failed to generate sales receipt: ${error.message}`);
+  }
 };
 
 export const sendWhatsAppReminder = async (data) => {
@@ -80,6 +168,9 @@ export const sendWhatsAppMessage = async (data) => {
         amount: data.amount || 0,
         pdf_url: data.pdf_url || data.document_url || "",
         invoice_id: data.invoice_id,
+        medical_record_id: data.medical_record_id,
+        pet_name: data.pet_name,
+        record_type: data.record_type,
         tenant_id: data.tenant_id || null
       })
     });

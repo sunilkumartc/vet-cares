@@ -20,12 +20,47 @@ export const Core = {
   },
   
   UploadFile: async (file, options = {}) => {
-    console.log('Mock file upload:', { fileName: file.name, options });
-    return {
-      fileId: `mock-file-${Date.now()}`,
-      url: `https://mock-storage.com/${file.name}`,
-      size: file.size
-    };
+    console.log('AWS S3 file upload:', { fileName: file.name, fileSize: file.size, options });
+    
+    try {
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('fileName', file.name);
+      formData.append('contentType', file.type || 'application/octet-stream');
+      
+      // Upload via backend API
+      const response = await fetch('/api/upload-to-s3', {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('S3 upload failed with status:', response.status, errorData);
+        throw new Error(errorData.error || `Upload failed with status ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      if (!result.success) {
+        console.error('S3 upload failed:', result);
+        throw new Error(result.error || 'Upload failed');
+      }
+      
+      console.log('S3 upload successful:', result);
+      
+      return {
+        fileId: result.fileName,
+        url: result.url,
+        size: result.size,
+        bucket: result.bucket,
+        isPublic: result.isPublic
+      };
+    } catch (error) {
+      console.error('Error uploading to S3:', error);
+      throw new Error(`Failed to upload file to S3: ${error.message}`);
+    }
   },
   
   GenerateImage: async (prompt, options = {}) => {

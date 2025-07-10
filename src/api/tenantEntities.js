@@ -53,4 +53,5 @@ export const TenantMissedSale = ApiMissedSale;
 export const TenantStockMovement = ApiStockMovement;
 export const TenantVaccine = ApiVaccine;
 export const TenantDiagnosticReport = ApiDiagnosticReport;
-export const TenantReportTemplate = ApiReportTemplate; 
+export const TenantReportTemplate = ApiReportTemplate;
+ 

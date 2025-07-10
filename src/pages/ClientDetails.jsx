@@ -293,11 +293,18 @@ export default function ClientDetails() {
                               )}
                             </div>
                           </div>
+                          <div className="flex gap-2">
                           <Link to={createPageUrl(`PetDetails?id=${pet.id}`)}>
                             <Button variant="outline" size="sm">
                               View Details
                             </Button>
                           </Link>
+                            <Link to={createPageUrl(`PetProfile?id=${pet.id}`)}>
+                              <Button variant="outline" size="sm" className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100">
+                                Vitals
+                              </Button>
+                            </Link>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>

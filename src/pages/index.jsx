@@ -38,6 +38,8 @@ import DNATrace from "./DNATrace";
 
 import PetMedicalHistory from "./PetMedicalHistory";
 
+import PetProfile from "./PetProfile";
+
 import ClientDetails from "./ClientDetails";
 
 import ClientManagement from "./ClientManagement";
@@ -99,6 +101,8 @@ const PAGES = {
     DNATrace: DNATrace,
     
     PetMedicalHistory: PetMedicalHistory,
+    
+    PetProfile: PetProfile,
     
     ClientDetails: ClientDetails,
     
@@ -183,6 +187,8 @@ function PagesContent() {
                 <Route path="/DNATrace" element={<DNATrace />} />
                 
                 <Route path="/PetMedicalHistory" element={<PetMedicalHistory />} />
+                
+                <Route path="/PetProfile" element={<PetProfile />} />
                 
                 <Route path="/ClientDetails" element={<ClientDetails />} />
                 

@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PawPrint, Calendar, FileText, Stethoscope, Pill, User, Phone, MapPin, Image, FileIcon, ArrowLeft, Heart, Weight } from "lucide-react";
+import { PawPrint, Calendar, FileText, Stethoscope, Pill, User, Phone, MapPin, Image, FileIcon, ArrowLeft, Heart, Weight, Activity } from "lucide-react";
 import { format, differenceInYears, differenceInMonths } from "date-fns";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -162,6 +162,16 @@ export default function PetDetails() {
               Back to My Pets
             </Button>
           </Link>
+
+          {/* View Vitals Button */}
+          <div className="flex justify-end mb-4">
+            <Link to={createPageUrl(`PetProfile?id=${petId}`)}>
+              <Button className="bg-blue-500 hover:bg-blue-600 text-white gap-2">
+                <Activity className="w-4 h-4" />
+                View Vital Trends
+              </Button>
+            </Link>
+          </div>
 
           {/* Pet Profile Card */}
           <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg overflow-hidden">

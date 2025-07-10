@@ -188,4 +188,5 @@ export const ApiMissedSale = new BaseApiEntity('missed_sales', apiClient);
 export const ApiStockMovement = new BaseApiEntity('stock_movements', apiClient);
 export const ApiVaccine = new BaseApiEntity('vaccines', apiClient);
 export const ApiDiagnosticReport = new BaseApiEntity('diagnostic_reports', apiClient);
-export const ApiReportTemplate = new BaseApiEntity('report_templates', apiClient); 
+export const ApiReportTemplate = new BaseApiEntity('report_templates', apiClient);
+ 

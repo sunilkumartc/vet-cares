@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { format, differenceInYears, addDays, intervalToDuration } from "date-fns";
-import { Plus, Search, Users, Phone, Mail, MapPin, PawPrint, FileText, Syringe, CreditCard, Calendar, Eye, Edit, ArrowRight, X, Maximize2, Menu, DollarSign, StickyNote, PlusCircle } from "lucide-react";
+import { Plus, Search, Users, Phone, Mail, MapPin, PawPrint, FileText, Syringe, CreditCard, Calendar, Eye, Edit, ArrowRight, X, Maximize2, Menu, DollarSign, StickyNote, PlusCircle, Activity, Heart, Weight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,6 +19,8 @@ import AddToBillForm from "../components/billing/AddToBillForm";
 import TimelineEvent from '../components/clients/TimelineEvent';
 import MemoWidget from "../components/memos/MemoWidget";
 import MemoForm from "../components/memos/MemoForm";
+import VitalTrendChart from "../components/vitals/VitalTrendChart";
+import DateRangePicker from "../components/vitals/DateRangePicker";
 
 const getPreciseAge = (birthDate) => {
   if (!birthDate) return 'Unknown age';
@@ -74,6 +76,13 @@ export default function ClientManagement() {
   const [displayedVaccinations, setDisplayedVaccinations] = useState([]);
   const [displayedInvoices, setDisplayedInvoices] = useState([]);
   const [displayedMemos, setDisplayedMemos] = useState([]);
+  
+  // Vital trends state
+  const [vitalDateRange, setVitalDateRange] = useState({
+    from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
+    to: new Date()
+  });
+  const [vitalResolution, setVitalResolution] = useState('day');
 
   useEffect(() => {
     loadAllData();
@@ -134,6 +143,8 @@ export default function ClientManagement() {
     }
   }, [selectedClient, selectedPetId, medicalRecords, vaccinations, clientInvoices, clientMemos, pets, isFullScreen]); // Added isFullScreen to trigger when view changes
 
+
+
   const handlePetSelect = (petId) => {
     // Toggle selection: if the same pet is clicked again, show all. Otherwise, select the pet.
     setSelectedPetId(currentId => (currentId === petId ? null : petId));
@@ -179,6 +190,8 @@ export default function ClientManagement() {
       setLoading(false);
     }
   };
+
+
 
   const handleFormSubmit = async (formData, formType) => {
     try {
@@ -790,7 +803,7 @@ export default function ClientManagement() {
           <div className="flex-1 overflow-auto bg-gray-50">
             <div className="p-6">
               <Tabs defaultValue="history" className="w-full">
-                <TabsList className="grid w-full grid-cols-5">
+                <TabsList className="grid w-full grid-cols-6">
                   <TabsTrigger value="history">
                     Timeline ({displayedHistory.length})
                   </TabsTrigger>
@@ -805,6 +818,10 @@ export default function ClientManagement() {
                   </TabsTrigger>
                   <TabsTrigger value="memos">
                     Internal Memos ({displayedMemos.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="vitals" disabled={!selectedPetId}>
+                    <Activity className="w-4 h-4 mr-2" />
+                    Vital Trends
                   </TabsTrigger>
                 </TabsList>
 
@@ -1093,6 +1110,125 @@ export default function ClientManagement() {
                     setMemoData={setClientMemos}
                     showHeader={false}
                   />
+                </TabsContent>
+
+                <TabsContent value="vitals" className="mt-6">
+                  {!selectedPetId ? (
+                    <div className="text-center py-12 text-gray-500">
+                      <Activity className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                      <p>Select a pet to view vital trends</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {/* Date Range Picker */}
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            Vital Trends for {pets.find(p => p.id === selectedPetId)?.name}
+                          </h3>
+                          <p className="text-sm text-gray-600">Track weight, blood pressure, heart rate, and temperature over time</p>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <select
+                            value={vitalResolution}
+                            onChange={(e) => setVitalResolution(e.target.value)}
+                            className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="day">Daily</option>
+                            <option value="week">Weekly</option>
+                            <option value="month">Monthly</option>
+                          </select>
+                          <DateRangePicker
+                            dateRange={vitalDateRange}
+                            onDateRangeChange={setVitalDateRange}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Vital Charts Grid */}
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                              <Weight className="w-5 h-5 text-blue-500" />
+                              Weight Trend
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <VitalTrendChart
+                              metric="weight"
+                              unitLabel="kg"
+                              color="#3B82F6"
+                              petId={selectedPetId}
+                              title="Weight"
+                              dateRange={vitalDateRange}
+                              resolution={vitalResolution}
+                            />
+                          </CardContent>
+                        </Card>
+
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                              <Activity className="w-5 h-5 text-green-500" />
+                              Blood Pressure
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <VitalTrendChart
+                              metric="blood_pressure"
+                              unitLabel="mmHg"
+                              color="#10B981"
+                              petId={selectedPetId}
+                              title="Blood Pressure"
+                              dateRange={vitalDateRange}
+                              resolution={vitalResolution}
+                            />
+                          </CardContent>
+                        </Card>
+
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                              <Heart className="w-5 h-5 text-red-500" />
+                              Heart Rate
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <VitalTrendChart
+                              metric="heart_rate"
+                              unitLabel="bpm"
+                              color="#EF4444"
+                              petId={selectedPetId}
+                              title="Heart Rate"
+                              dateRange={vitalDateRange}
+                              resolution={vitalResolution}
+                            />
+                          </CardContent>
+                        </Card>
+
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                              <Activity className="w-5 h-5 text-orange-500" />
+                              Temperature
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <VitalTrendChart
+                              metric="temperature"
+                              unitLabel="°C"
+                              color="#F97316"
+                              petId={selectedPetId}
+                              title="Temperature"
+                              dateRange={vitalDateRange}
+                              resolution={vitalResolution}
+                            />
+                          </CardContent>
+                        </Card>
+                      </div>
+                    </div>
+                  )}
                 </TabsContent>
               </Tabs>
             </div>

@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fetch from 'node-fetch';
 import cron from 'node-cron';
+import multer from 'multer';
 import { 
   initializeElasticsearch, 
   searchSOAPSuggestions, 
@@ -13,6 +14,7 @@ import {
   getIndexStats,
   indexSOAPField
 } from './src/api/elasticsearch.js';
+import AWS from 'aws-sdk';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -24,6 +26,22 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'dist')));
+
+// Configure multer for file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Allow PDF files
+    if (file.mimetype === 'application/pdf') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF files are allowed'), false);
+    }
+  }
+});
 
 // MongoDB connection
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017';
@@ -302,6 +320,201 @@ app.get('/api/:entity/:id', async (req, res) => {
   }
 });
 
+// Create a separate multer instance for S3 uploads that allows both PDF and text files
+const s3Upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Allow PDF and text files for testing
+    if (file.mimetype === 'application/pdf' || file.mimetype === 'text/plain') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF and text files are allowed'), false);
+    }
+  }
+});
+
+// AWS S3 Upload endpoint - must be before catch-all route
+app.post('/api/upload-to-s3', s3Upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'No file uploaded' });
+    }
+
+    // AWS S3 Configuration
+    const AWS_S3_ACCESS_KEY_ID = 'AKIA457W7TET5LOMDM6H';
+    const AWS_S3_SECRET_ACCESS_KEY = '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';
+    const AWS_S3_REGION = 'eu-north-1';
+    const AWS_S3_BUCKET = 'vetinvoice';
+
+    console.log('AWS S3 Config:', {
+      region: AWS_S3_REGION,
+      bucket: AWS_S3_BUCKET,
+      hasAccessKey: !!AWS_S3_ACCESS_KEY_ID,
+      hasSecretKey: !!AWS_S3_SECRET_ACCESS_KEY,
+      fileSize: req.file.size,
+      fileName: req.file.originalname,
+      contentType: req.file.mimetype,
+      customFileName: req.body.fileName,
+      bodyKeys: Object.keys(req.body)
+    });
+
+    const s3 = new AWS.S3({
+      accessKeyId: AWS_S3_ACCESS_KEY_ID,
+      secretAccessKey: AWS_S3_SECRET_ACCESS_KEY,
+      region: AWS_S3_REGION
+    });
+
+    // Use custom fileName from request body, fallback to original name
+    const customFileName = req.body.fileName || req.file.originalname;
+    const s3Key = customFileName.startsWith('invoice/') ? customFileName : `invoice/${customFileName}`;
+    
+    const params = {
+      Bucket: AWS_S3_BUCKET,
+      Key: s3Key,
+      Body: req.file.buffer,
+      ContentType: req.file.mimetype,
+      ACL: 'public-read'
+    };
+
+    console.log('Uploading to S3 with params:', {
+      bucket: params.Bucket,
+      key: params.Key,
+      contentType: params.ContentType,
+      acl: params.ACL,
+      bodySize: req.file.buffer.length
+    });
+
+    // Upload to S3 with detailed error handling
+    const uploadResult = await s3.upload(params).promise();
+    
+    console.log('S3 upload successful:', uploadResult);
+
+    // Generate public URL
+    const publicUrl = `https://${AWS_S3_BUCKET}.s3.${AWS_S3_REGION}.amazonaws.com/${s3Key}`;
+    
+    res.json({ 
+      success: true, 
+      url: publicUrl,
+      fileName: customFileName,
+      bucket: AWS_S3_BUCKET,
+      isPublic: true,
+      acl: 'public-read',
+      size: req.file.size
+    });
+
+  } catch (error) {
+    console.error('Error uploading to S3:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code,
+      statusCode: error.statusCode,
+      requestId: error.requestId
+    });
+    
+    // Provide more specific error messages
+    let errorMessage = 'Failed to upload file to S3';
+    if (error.code === 'NoSuchBucket') {
+      errorMessage = 'S3 bucket does not exist';
+    } else if (error.code === 'AccessDenied') {
+      errorMessage = 'Access denied to S3 bucket - check credentials and permissions';
+    } else if (error.code === 'InvalidAccessKeyId') {
+      errorMessage = 'Invalid AWS access key ID';
+    } else if (error.code === 'SignatureDoesNotMatch') {
+      errorMessage = 'Invalid AWS secret access key';
+    } else if (error.code === 'NetworkingError') {
+      errorMessage = 'Network error connecting to AWS S3';
+    }
+    
+    res.status(500).json({ 
+      success: false, 
+      error: errorMessage,
+      details: error.message,
+      code: error.code
+    });
+  }
+});
+
+// Test S3 connectivity endpoint - must be before catch-all route
+app.post('/api/test-s3', async (req, res) => {
+  try {
+    // AWS S3 Configuration
+    const AWS_S3_ACCESS_KEY_ID = 'AKIA457W7TET5LOMDM6H';
+    const AWS_S3_SECRET_ACCESS_KEY = '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';
+    const AWS_S3_REGION = 'eu-north-1';
+    const AWS_S3_BUCKET = 'vetinvoice';
+
+    const s3 = new AWS.S3({
+      accessKeyId: AWS_S3_ACCESS_KEY_ID,
+      secretAccessKey: AWS_S3_SECRET_ACCESS_KEY,
+      region: AWS_S3_REGION
+    });
+
+    // Test 1: Check if bucket exists
+    console.log('Testing S3 connectivity...');
+    
+    try {
+      await s3.headBucket({ Bucket: AWS_S3_BUCKET }).promise();
+      console.log('✅ Bucket exists and is accessible');
+    } catch (bucketError) {
+      console.error('❌ Bucket access failed:', bucketError.message);
+      return res.status(500).json({
+        success: false,
+        error: 'Cannot access S3 bucket',
+        details: bucketError.message,
+        code: bucketError.code
+      });
+    }
+
+    // Test 2: Upload a test file
+    const testContent = `Test upload at ${new Date().toISOString()}`;
+    const testKey = `test/test-${Date.now()}.txt`;
+    
+    const uploadParams = {
+      Bucket: AWS_S3_BUCKET,
+      Key: testKey,
+      Body: testContent,
+      ContentType: 'text/plain',
+      ACL: 'public-read'
+    };
+
+    console.log('Uploading test file...');
+    const uploadResult = await s3.upload(uploadParams).promise();
+    
+    const testUrl = `https://${AWS_S3_BUCKET}.s3.${AWS_S3_REGION}.amazonaws.com/${testKey}`;
+    
+    console.log('✅ Test upload successful:', testUrl);
+
+    res.json({
+      success: true,
+      message: 'S3 connectivity test passed',
+      testUrl: testUrl,
+      uploadResult: uploadResult,
+      config: {
+        region: AWS_S3_REGION,
+        bucket: AWS_S3_BUCKET,
+        hasCredentials: true
+      }
+    });
+
+  } catch (error) {
+    console.error('S3 connectivity test failed:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
+    
+    res.status(500).json({
+      success: false,
+      error: 'S3 connectivity test failed',
+      details: error.message,
+      code: error.code
+    });
+  }
+});
+
 app.post('/api/:entity', async (req, res) => {
   try {
     const { entity } = req.params;
@@ -356,6 +569,11 @@ app.delete('/api/:entity/:id', async (req, res) => {
     res.status(500).json({ error: `Failed to delete ${req.params.entity}` });
   }
 });
+
+
+
+// WhatsApp send invoice endpoint - REMOVED (duplicate endpoint)
+// The real WhatsApp API endpoint is at line 1754
 
 
 
@@ -1319,7 +1537,24 @@ async function generateSOAPSuggestion(field, currentText, patientContext) {
 // WhatsApp Invoice API endpoint (backend proxy to avoid CORS)
 app.post('/api/whatsapp/send-invoice', async (req, res) => {
   try {
-    const { phone, customer_name, amount, pdf_url, invoice_id, tenant_id } = req.body;
+    const { phone, customer_name, amount, pdf_url, invoice_id, medical_record_id, pet_name, record_type, tenant_id } = req.body;
+    
+    console.log('WhatsApp send invoice request:', {
+      phone,
+      customer_name,
+      amount,
+      pdf_url,
+      invoice_id,
+      medical_record_id,
+      pet_name,
+      record_type,
+      tenant_id
+    });
+    
+    // Validate required fields
+    if (!phone || !customer_name) {
+      return res.status(400).json({ error: 'Phone and customer name are required' });
+    }
     
     // WhatsApp API configuration
     const WHATSAPP_API_URL = 'https://publicapi.myoperator.co/chat/messages';
@@ -1358,28 +1593,86 @@ app.post('/api/whatsapp/send-invoice', async (req, res) => {
       }
     }
     
-    // Prepare the message payload
-    const payload = {
-      phone_number_id: PHONE_NUMBER_ID,
-      customer_country_code: "91",
-      customer_number: phoneNumber,
-      data: {
-        type: "template",
-        context: {
-          template_name: "send_bill",
-          language: "en",
-          body: {
-            customername: customer_name || "Customer",
-            amt: amount?.toString() || "0",
-            invoicelink: pdf_url || "",
-            clinicname: tenantDetails.clinicName,
-            clinicphone: tenantDetails.contactPhone
+    // Determine message type and prepare payload
+    let payload;
+    let messageType = 'invoice';
+    
+    if (invoice_id) {
+      // Invoice message using template
+      payload = {
+        phone_number_id: PHONE_NUMBER_ID,
+        customer_country_code: "91",
+        customer_number: phoneNumber,
+        data: {
+          type: "template",
+          context: {
+            template_name: "send_bill",
+            language: "en",
+            body: {
+              customername: customer_name || "Customer",
+              amt: amount?.toString() || "0",
+              invoicelink: pdf_url || "", // This will be the short URL
+              clinicname: tenantDetails.clinicName,
+              clinicphone: tenantDetails.contactPhone
+            }
           }
-        }
-      },
-      reply_to: null,
-      myop_ref_id: `invoice_${invoice_id || Date.now()}_${Date.now()}`
-    };
+        },
+        reply_to: null,
+        myop_ref_id: `invoice_${invoice_id}_${Date.now()}`
+      };
+      messageType = 'invoice';
+    } else if (medical_record_id) {
+      // Medical record message using custom text
+      const messageContent = `Dear ${customer_name},
+
+Your pet ${pet_name || 'pet'}'s medical record is ready.
+
+📋 Medical Record: ${pdf_url || 'Not available'}
+📅 Record Type: ${record_type || 'General Checkup'}
+
+For any queries, please contact us at ${tenantDetails.contactPhone}.
+
+Thank you for choosing ${tenantDetails.clinicName}! 🐾`;
+      
+      payload = {
+        phone_number_id: PHONE_NUMBER_ID,
+        customer_country_code: "91",
+        customer_number: phoneNumber,
+        data: {
+          type: "text",
+          text: {
+            body: messageContent
+          }
+        },
+        reply_to: null,
+        myop_ref_id: `medical_${medical_record_id}_${Date.now()}`
+      };
+      messageType = 'medical_record';
+    } else {
+      // Generic document message
+      const messageContent = `Dear ${customer_name},
+
+Please find your document attached: ${pdf_url || 'Not available'}
+
+For any queries, please contact us at ${tenantDetails.contactPhone}.
+
+Thank you for choosing ${tenantDetails.clinicName}! 🐾`;
+      
+      payload = {
+        phone_number_id: PHONE_NUMBER_ID,
+        customer_country_code: "91",
+        customer_number: phoneNumber,
+        data: {
+          type: "text",
+          text: {
+            body: messageContent
+          }
+        },
+        reply_to: null,
+        myop_ref_id: `document_${Date.now()}_${Date.now()}`
+      };
+      messageType = 'document';
+    }
     
     console.log('WhatsApp API payload:', payload);
     
@@ -1402,10 +1695,45 @@ app.post('/api/whatsapp/send-invoice', async (req, res) => {
     
     console.log('WhatsApp API response:', result);
     
+    // Store the message in database for tracking
+    const messageRecord = {
+      _id: new ObjectId(),
+      message_id: result.message_id || result.id || `wa-msg-${Date.now()}`,
+      phone: phone,
+      customer_name,
+      message_type: messageType,
+      pdf_url,
+      invoice_id,
+      medical_record_id,
+      pet_name,
+      record_type,
+      tenant_id,
+      status: 'sent',
+      sent_date: new Date(),
+      created_date: new Date(),
+      api_response: result
+    };
+    
+    // Insert into messages collection for tracking
+    await db.collection('whatsapp_messages').insertOne(messageRecord);
+    
     res.json({
       success: true,
       messageId: result.message_id || result.id || `wa-msg-${Date.now()}`,
-      apiResponse: result
+      message: 'WhatsApp message sent successfully',
+      phone: phone,
+      messageType,
+      apiResponse: result,
+      details: {
+        customer_name,
+        amount,
+        pdf_url,
+        invoice_id,
+        medical_record_id,
+        pet_name,
+        record_type,
+        tenant_id
+      }
     });
   } catch (error) {
     console.error('Error sending WhatsApp message:', error);
@@ -1564,6 +1892,281 @@ app.get('/api/soap/stats', async (req, res) => {
   }
 });
 
+// Feedback API endpoints
+app.get('/api/feedback/:appointmentId', async (req, res) => {
+  try {
+    const { appointmentId } = req.params;
+    
+    if (!appointmentId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Appointment ID is required'
+      });
+    }
+
+    const appointment = await db.collection('appointments').findOne(
+      { _id: new ObjectId(appointmentId) },
+      { projection: { feedback: 1, pet_id: 1, staff_id: 1, appointment_date: 1, status: 1 } }
+    );
+
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        error: 'Appointment not found'
+      });
+    }
+
+    // Get pet and staff details for display
+    const [pet, staff] = await Promise.all([
+      appointment.pet_id ? db.collection('pets').findOne({ _id: new ObjectId(appointment.pet_id) }) : null,
+      appointment.staff_id ? db.collection('staff').findOne({ _id: new ObjectId(appointment.staff_id) }) : null
+    ]);
+
+    res.json({
+      success: true,
+      feedback: appointment.feedback || null,
+      appointment: {
+        id: appointment._id.toString(),
+        date: appointment.appointment_date,
+        status: appointment.status,
+        pet: pet ? {
+          id: pet._id.toString(),
+          name: pet.name,
+          species: pet.species,
+          breed: pet.breed
+        } : null,
+        staff: staff ? {
+          id: staff._id.toString(),
+          name: `${staff.first_name} ${staff.last_name}`,
+          role: staff.role
+        } : null
+      }
+    });
+  } catch (error) {
+    console.error('Error getting feedback:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get feedback'
+    });
+  }
+});
+
+app.post('/api/feedback/submit', async (req, res) => {
+  try {
+    const { rating, comment, tags, appointment_id } = req.body;
+    
+    // Validate input
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({
+        success: false,
+        error: 'Rating must be between 1 and 5'
+      });
+    }
+
+    if (!appointment_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'Appointment ID is required'
+      });
+    }
+    
+    // Check if appointment exists and is completed
+    const appointment = await db.collection('appointments').findOne({
+      _id: new ObjectId(appointment_id),
+      status: 'completed'
+    });
+
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        error: 'Appointment not found or not completed'
+      });
+    }
+
+    // Check if feedback already exists
+    if (appointment.feedback) {
+      return res.status(400).json({
+        success: false,
+        error: 'Feedback already submitted for this appointment'
+      });
+    }
+
+    // Update appointment with feedback
+    const feedbackData = {
+      rating: rating,
+      comment: comment || '',
+      tags: tags || [],
+      submitted_at: new Date(),
+      ip_address: req.ip,
+      user_agent: req.get('User-Agent')
+    };
+
+    const result = await db.collection('appointments').updateOne(
+      { _id: new ObjectId(appointment_id) },
+      { 
+        $set: { 
+          feedback: feedbackData,
+          updated_date: new Date()
+        } 
+      }
+    );
+
+    if (result.modifiedCount === 0) {
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to save feedback'
+      });
+    }
+
+    // Get updated appointment with pet and staff details
+    const updatedAppointment = await db.collection('appointments').findOne(
+      { _id: new ObjectId(appointment_id) },
+      { 
+        projection: { 
+          feedback: 1, 
+          pet_id: 1, 
+          staff_id: 1, 
+          appointment_date: 1,
+          client_id: 1
+        } 
+      }
+    );
+
+    const [pet, staff, client] = await Promise.all([
+      updatedAppointment.pet_id ? db.collection('pets').findOne({ _id: new ObjectId(updatedAppointment.pet_id) }) : null,
+      updatedAppointment.staff_id ? db.collection('staff').findOne({ _id: new ObjectId(updatedAppointment.staff_id) }) : null,
+      updatedAppointment.client_id ? db.collection('clients').findOne({ _id: new ObjectId(updatedAppointment.client_id) }) : null
+    ]);
+
+    // Send thank you message via WhatsApp if configured
+    if (client?.phone && process.env.WHATSAPP_API_KEY) {
+      try {
+        const message = `Thank you for your feedback! 🐾
+
+We're glad you had a great experience with ${staff?.first_name || 'our team'} and ${pet?.name || 'your pet'}. Your feedback helps us provide better care for all our furry friends.
+
+See you next time! 🐕🐱`;
+
+        const response = await fetch(process.env.WHATSAPP_API_URL || 'https://publicapi.myoperator.co/chat/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.WHATSAPP_API_KEY}`
+          },
+          body: JSON.stringify({
+            phone: client.phone,
+            message: message
+          })
+        });
+
+        if (!response.ok) {
+          console.warn('Failed to send WhatsApp thank you message:', response.status);
+        }
+      } catch (whatsappError) {
+        console.warn('Failed to send WhatsApp thank you message:', whatsappError);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: 'Thank you for your feedback!',
+      feedback: feedbackData,
+      appointment: {
+        id: updatedAppointment._id.toString(),
+        date: updatedAppointment.appointment_date,
+        pet: pet ? {
+          name: pet.name,
+          species: pet.species
+        } : null,
+        staff: staff ? {
+          name: `${staff.first_name} ${staff.last_name}`
+        } : null
+      }
+    });
+  } catch (error) {
+    console.error('Error submitting feedback:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to submit feedback'
+    });
+  }
+});
+
+app.get('/api/feedback/analytics', async (req, res) => {
+  try {
+    const { tenant_id } = req.query;
+    
+    if (!tenant_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'Tenant ID is required'
+      });
+    }
+
+    // Aggregate feedback data
+    const pipeline = [
+      {
+        $match: {
+          tenant_id: tenant_id,
+          feedback: { $exists: true, $ne: null }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalFeedback: { $sum: 1 },
+          averageRating: { $avg: '$feedback.rating' },
+          ratingDistribution: {
+            $push: '$feedback.rating'
+          },
+          tagCounts: {
+            $push: '$feedback.tags'
+          }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          totalFeedback: 1,
+          averageRating: { $round: ['$averageRating', 2] },
+          ratingDistribution: {
+            '1': { $size: { $filter: { input: '$ratingDistribution', cond: { $eq: ['$$this', 1] } } } },
+            '2': { $size: { $filter: { input: '$ratingDistribution', cond: { $eq: ['$$this', 2] } } } },
+            '3': { $size: { $filter: { input: '$ratingDistribution', cond: { $eq: ['$$this', 3] } } } },
+            '4': { $size: { $filter: { input: '$ratingDistribution', cond: { $eq: ['$$this', 4] } } } },
+            '5': { $size: { $filter: { input: '$ratingDistribution', cond: { $eq: ['$$this', 5] } } } }
+          },
+          tagCounts: 1
+        }
+      }
+    ];
+
+    const analytics = await db.collection('appointments').aggregate(pipeline).toArray();
+    
+    // Process tag counts
+    const tagCounts = {};
+    if (analytics[0]?.tagCounts) {
+      analytics[0].tagCounts.flat().forEach(tag => {
+        tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+      });
+    }
+
+    res.json({
+      success: true,
+      analytics: {
+        ...analytics[0],
+        tagCounts
+      }
+    });
+  } catch (error) {
+    console.error('Error getting feedback analytics:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get feedback analytics'
+    });
+  }
+});
+
 // Invoice PDF serving endpoint
 app.get('/api/invoice/:invoiceId/pdf', async (req, res) => {
   try {
@@ -1676,6 +2279,281 @@ app.get('/api/invoice/:invoiceId/pdf', async (req, res) => {
     res.status(500).json({ error: 'Failed to serve invoice PDF' });
   }
 });
+
+// Pet Vitals API - Extract from Medical Records
+app.get('/api/pets/:petId/vitals', async (req, res) => {
+  try {
+    const { petId } = req.params;
+    const { metric, start_date, end_date, resolution = 'day', tenant_id } = req.query;
+    
+    // Validate inputs
+    if (!petId) {
+      return res.status(400).json({ success: false, error: 'Pet ID is required' });
+    }
+    
+    if (!metric) {
+      return res.status(400).json({ success: false, error: 'Metric is required' });
+    }
+    
+    const validMetrics = ['weight', 'blood_pressure', 'heart_rate', 'temperature'];
+    if (!validMetrics.includes(metric)) {
+      return res.status(400).json({ success: false, error: 'Invalid metric. Must be one of: weight, blood_pressure, heart_rate, temperature' });
+    }
+    
+    const validResolutions = ['day', 'week', 'month'];
+    if (!validResolutions.includes(resolution)) {
+      return res.status(400).json({ success: false, error: 'Invalid resolution. Must be one of: day, week, month' });
+    }
+    
+    let objectId;
+    try {
+      objectId = new ObjectId(petId);
+    } catch (e) {
+      return res.status(400).json({ success: false, error: 'Invalid pet ID format' });
+    }
+    
+    // Build date range filter
+    const dateFilter = {};
+    if (start_date) {
+      dateFilter.$gte = new Date(start_date);
+    }
+    if (end_date) {
+      dateFilter.$lte = new Date(end_date + 'T23:59:59.999Z');
+    }
+    
+    // Query medical records for the pet
+    const query = { pet_id: objectId };
+    if (tenant_id && tenant_id !== 'null' && tenant_id !== 'undefined') {
+      query.tenant_id = tenant_id;
+    }
+    if (Object.keys(dateFilter).length > 0) {
+      query.visit_date = dateFilter;
+    }
+    
+    const medicalRecords = await db.collection('medical_records')
+      .find(query)
+      .sort({ visit_date: 1 })
+      .toArray();
+    
+    // Extract vital data from medical records
+    const vitalData = extractVitalsFromMedicalRecords(medicalRecords, metric);
+    
+    // Aggregate data based on resolution
+    const aggregatedData = aggregateVitalData(vitalData, resolution, metric);
+    
+    res.json({
+      success: true,
+      data: aggregatedData
+    });
+  } catch (error) {
+    console.error('Error getting pet vitals:', error);
+    res.status(500).json({ success: false, error: 'Failed to get pet vitals' });
+  }
+});
+
+// Function to extract vitals from medical records
+function extractVitalsFromMedicalRecords(medicalRecords, metric) {
+  const vitalData = [];
+  
+  medicalRecords.forEach(record => {
+    const visitDate = new Date(record.visit_date);
+    
+    // Extract vitals from different fields based on metric
+    switch (metric) {
+      case 'weight':
+        // Look for weight in objective, assessment, or plan fields
+        const weightMatch = extractWeightFromText(record.objective || record.assessment || record.plan || '');
+        if (weightMatch) {
+          vitalData.push({
+            recorded_at: visitDate,
+            value: weightMatch,
+            unit: 'kg'
+          });
+        }
+        break;
+        
+      case 'blood_pressure':
+        // Look for blood pressure in objective field
+        const bpMatch = extractBloodPressureFromText(record.objective || '');
+        if (bpMatch) {
+          vitalData.push({
+            recorded_at: visitDate,
+            value: bpMatch,
+            unit: 'mmHg'
+          });
+        }
+        break;
+        
+      case 'heart_rate':
+        // Look for heart rate in objective field
+        const hrMatch = extractHeartRateFromText(record.objective || '');
+        if (hrMatch) {
+          vitalData.push({
+            recorded_at: visitDate,
+            value: hrMatch,
+            unit: 'bpm'
+          });
+        }
+        break;
+        
+      case 'temperature':
+        // Look for temperature in objective field
+        const tempMatch = extractTemperatureFromText(record.objective || '');
+        if (tempMatch) {
+          vitalData.push({
+            recorded_at: visitDate,
+            value: tempMatch,
+            unit: '°C'
+          });
+        }
+        break;
+    }
+  });
+  
+  return vitalData;
+}
+
+// Helper functions to extract specific vital values from text
+function extractWeightFromText(text) {
+  // Look for weight patterns like "25.5 kg", "weight: 25.5", "25.5kg", etc.
+  const weightPatterns = [
+    /weight[:\s]*(\d+\.?\d*)\s*kg/i,
+    /(\d+\.?\d*)\s*kg.*weight/i,
+    /weight[:\s]*(\d+\.?\d*)/i,
+    /(\d+\.?\d*)\s*kg/i
+  ];
+  
+  for (const pattern of weightPatterns) {
+    const match = text.match(pattern);
+    if (match) {
+      const weight = parseFloat(match[1]);
+      if (weight > 0 && weight < 200) { // Reasonable weight range
+        return weight;
+      }
+    }
+  }
+  return null;
+}
+
+function extractBloodPressureFromText(text) {
+  // Look for BP patterns like "120/80", "BP: 120/80", "120/80 mmHg", etc.
+  const bpPatterns = [
+    /bp[:\s]*(\d+)\/(\d+)/i,
+    /blood\s*pressure[:\s]*(\d+)\/(\d+)/i,
+    /(\d+)\/(\d+)\s*mmhg/i,
+    /(\d+)\/(\d+)/i
+  ];
+  
+  for (const pattern of bpPatterns) {
+    const match = text.match(pattern);
+    if (match) {
+      const systolic = parseInt(match[1]);
+      const diastolic = parseInt(match[2]);
+      if (systolic > 60 && systolic < 300 && diastolic > 30 && diastolic < 200) {
+        return systolic; // Return systolic pressure
+      }
+    }
+  }
+  
+  return null;
+}
+
+function extractHeartRateFromText(text) {
+  // Look for HR patterns like "80 bpm", "HR: 80", "heart rate: 80", etc.
+  const hrPatterns = [
+    /hr[:\s]*(\d+)/i,
+    /heart\s*rate[:\s]*(\d+)/i,
+    /(\d+)\s*bpm/i,
+    /pulse[:\s]*(\d+)/i
+  ];
+  
+  for (const pattern of hrPatterns) {
+    const match = text.match(pattern);
+    if (match) {
+      const hr = parseInt(match[1]);
+      if (hr > 30 && hr < 300) { // Reasonable heart rate range
+        return hr;
+      }
+    }
+  }
+  return null;
+}
+
+function extractTemperatureFromText(text) {
+  // Look for temperature patterns like "38.5°C", "temp: 38.5", "temperature: 38.5", etc.
+  const tempPatterns = [
+    /temp[:\s]*(\d+\.?\d*)/i,
+    /temperature[:\s]*(\d+\.?\d*)/i,
+    /(\d+\.?\d*)\s*°c/i,
+    /(\d+\.?\d*)\s*celsius/i
+  ];
+  
+  for (const pattern of tempPatterns) {
+    const match = text.match(pattern);
+    if (match) {
+      const temp = parseFloat(match[1]);
+      if (temp > 30 && temp < 45) { // Reasonable temperature range
+        return temp;
+      }
+    }
+  }
+  return null;
+}
+
+// Function to aggregate vital data by resolution
+function aggregateVitalData(vitalData, resolution, metric) {
+  if (vitalData.length === 0) {
+    return [];
+  }
+  
+  // Group data by date based on resolution
+  const groupedData = {};
+  
+  vitalData.forEach(vital => {
+    let dateKey;
+    const date = new Date(vital.recorded_at);
+    
+    switch (resolution) {
+      case 'day':
+        dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
+        break;
+      case 'week':
+        const weekStart = new Date(date);
+        weekStart.setDate(date.getDate() - date.getDay());
+        dateKey = weekStart.toISOString().split('T')[0];
+        break;
+      case 'month':
+        dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`; // YYYY-MM
+        break;
+    }
+    
+    if (!groupedData[dateKey]) {
+      groupedData[dateKey] = [];
+    }
+    groupedData[dateKey].push(vital.value);
+  });
+  
+  // Calculate aggregated values for each group
+  const aggregatedData = Object.entries(groupedData).map(([dateKey, values]) => {
+    const avgValue = values.reduce((sum, val) => sum + val, 0) / values.length;
+    const minValue = Math.min(...values);
+    const maxValue = Math.max(...values);
+    
+    return {
+      t: new Date(dateKey + 'T00:00:00.000Z').toISOString(),
+      v: Math.round(avgValue * 100) / 100, // Round to 2 decimal places
+      min: minValue,
+      max: maxValue,
+      count: values.length
+    };
+  });
+  
+  return aggregatedData.sort((a, b) => new Date(a.t) - new Date(b.t));
+}
+
+
+
+
 
 // Serve React app
 app.get('*', (req, res) => {
