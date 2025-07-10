@@ -1,0 +1,34 @@
+{
+  "name": "vet-cares-server",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "migrate:multitenant": "node scripts/migrate-to-multitenant.js",
+    "test:tenant-isolation": "node scripts/test-tenant-isolation.js",
+    "migrate:entities": "node scripts/migrate-entities.js",
+    "create:admin": "node scripts/create-admin-user.js",
+    "vaccination-reminders": "node scripts/run-vaccination-reminders.js",
+    "setup:test-vaccination": "node scripts/setup-test-vaccination-data.js",
+    "setup:elasticsearch": "node scripts/setup-elasticsearch.js",
+    "test:soap-autocomplete": "node scripts/test-soap-autocomplete.js",
+    "test:s3-upload": "node test-s3-upload-node.js"
+  },
+  "dependencies": {
+    "@elastic/elasticsearch": "^8.11.0",
+    "aws-sdk": "^2.1692.0",
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.18.2",
+    "mongodb": "^6.3.0",
+    "multer": "^2.0.1",
+    "node-cron": "^3.0.3",
+    "node-fetch": "^2.7.0"
+  },
+  "devDependencies": {
+    "@flydotio/dockerfile": "^0.7.8"
+  }
+} 

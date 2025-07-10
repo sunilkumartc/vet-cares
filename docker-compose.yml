@@ -1,54 +1,75 @@
 version: '3.8'
-services:
-  mongo:
-    image: mongo:6
-    restart: always
-    ports:
-      - 27017:27017
-    volumes:
-      - mongo_data:/data/db
-    healthcheck:
-      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:6.0
+    container_name: vet-cares-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+    volumes:
+      - mongodb_data:/data/db
+      - ./server/scripts/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+
+  # Elasticsearch
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: vet-cares-elasticsearch
+    restart: unless-stopped
+    ports:
+      - "9200:9200"
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
-      - ES_JAVA_OPTS=-Xms512m -Xmx512m
-    ports:
-      - 9200:9200
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
     volumes:
-      - es_data:/usr/share/elasticsearch/data
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - elasticsearch_data:/usr/share/elasticsearch/data
 
-  api:
-    build: .
-    depends_on:
-      mongo:
-        condition: service_healthy
-      elasticsearch:
-        condition: service_healthy
-    environment:
-      - NODE_ENV=production
-      - MONGO_URI=mongodb://mongo:27017/vet-cares
-      - ES_URL=http://elasticsearch:9200
-      - PORT=3001
+  # Backend Server
+  server:
+    build: ./server
+    container_name: vet-cares-server
+    restart: unless-stopped
     ports:
-      - 3001:3001
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/api/soap/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - MONGODB_URI=mongodb://admin:password@mongodb:27017/vet-cares?authSource=admin
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - AWS_S3_ACCESS_KEY_ID=${AWS_S3_ACCESS_KEY_ID}
+      - AWS_S3_SECRET_ACCESS_KEY=${AWS_S3_SECRET_ACCESS_KEY}
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET}
+      - AWS_S3_REGION=${AWS_S3_REGION}
+      - WHATSAPP_API_URL=${WHATSAPP_API_URL}
+      - WHATSAPP_TOKEN=${WHATSAPP_TOKEN}
+      - WHATSAPP_COMPANY_ID=${WHATSAPP_COMPANY_ID}
+      - WHATSAPP_PHONE_NUMBER_ID=${WHATSAPP_PHONE_NUMBER_ID}
+    depends_on:
+      - mongodb
+      - elasticsearch
+    volumes:
+      - ./server:/app
+      - /app/node_modules
+
+  # Frontend Client
+  client:
+    build: ./client
+    container_name: vet-cares-client
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:3001
+    depends_on:
+      - server
+    volumes:
+      - ./client:/app
+      - /app/node_modules
 
 volumes:
-  mongo_data:
-  es_data: 
+  mongodb_data:
+  elasticsearch_data: 
