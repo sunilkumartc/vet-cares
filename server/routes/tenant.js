@@ -10,13 +10,43 @@ router.get('/current', async (req, res) => {
     // First try to get subdomain from query parameter (for frontend requests)
     let slug = req.query.subdomain;
     
-    // If no subdomain in query, fall back to Host header (for direct API calls)
+    // If no subdomain in query, try to extract from Origin header (for Vercel rewrites)
+    if (!slug && req.headers.origin) {
+      try {
+        const originUrl = new URL(req.headers.origin);
+        const hostname = originUrl.hostname;
+        const parts = hostname.split('.');
+        if (parts.length > 1 && parts[0] !== 'localhost' && parts[0] !== '127' && parts[0] !== 'api') {
+          slug = parts[0];
+          console.log('[TENANT DEBUG] Extracted from Origin header:', slug);
+        }
+      } catch (e) {
+        console.log('[TENANT DEBUG] Failed to parse Origin header:', e.message);
+      }
+    }
+    
+    // If still no subdomain, try Referer header
+    if (!slug && req.headers.referer) {
+      try {
+        const refererUrl = new URL(req.headers.referer);
+        const hostname = refererUrl.hostname;
+        const parts = hostname.split('.');
+        if (parts.length > 1 && parts[0] !== 'localhost' && parts[0] !== '127' && parts[0] !== 'api') {
+          slug = parts[0];
+          console.log('[TENANT DEBUG] Extracted from Referer header:', slug);
+        }
+      } catch (e) {
+        console.log('[TENANT DEBUG] Failed to parse Referer header:', e.message);
+      }
+    }
+    
+    // If still no subdomain, fall back to Host header (for direct API calls)
     if (!slug) {
       const host = req.headers.host; // e.g., 'clinic3.localhost:8090'
       const hostWithoutPort = host.split(':')[0]; // 'clinic3.localhost'
 
       const parts = hostWithoutPort.split('.');
-      if (parts.length > 1 && parts[0] !== 'localhost' && parts[0] !== '127') {
+      if (parts.length > 1 && parts[0] !== 'localhost' && parts[0] !== '127' && parts[0] !== 'api') {
         slug = parts[0];
       } else {
         slug = 'default';
@@ -24,7 +54,7 @@ router.get('/current', async (req, res) => {
     }
 
     // Debug log for domain/subdomain extraction
-    console.log('[TENANT DEBUG] Query subdomain:', req.query.subdomain, '| Host header:', req.headers.host, '| Final slug:', slug);
+    console.log('[TENANT DEBUG] Query subdomain:', req.query.subdomain, '| Origin:', req.headers.origin, '| Referer:', req.headers.referer, '| Host header:', req.headers.host, '| Final slug:', slug);
     
     const collection = dbUtils.getCollection('tenants');
     
