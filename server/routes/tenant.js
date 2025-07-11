@@ -7,19 +7,24 @@ const router = express.Router();
 // Get current tenant - this must come before /:id route
 router.get('/current', async (req, res) => {
   try {
-    const host = req.headers.host; // e.g., 'clinic3.localhost:8090'
-    const hostWithoutPort = host.split(':')[0]; // 'clinic3.localhost'
-    let slug = 'default';
+    // First try to get subdomain from query parameter (for frontend requests)
+    let slug = req.query.subdomain;
+    
+    // If no subdomain in query, fall back to Host header (for direct API calls)
+    if (!slug) {
+      const host = req.headers.host; // e.g., 'clinic3.localhost:8090'
+      const hostWithoutPort = host.split(':')[0]; // 'clinic3.localhost'
 
-    const parts = hostWithoutPort.split('.');
-    if (parts.length > 1 && parts[0] !== 'localhost' && parts[0] !== '127') {
-      slug = parts[0];
-    } else {
-      slug = 'default';
+      const parts = hostWithoutPort.split('.');
+      if (parts.length > 1 && parts[0] !== 'localhost' && parts[0] !== '127') {
+        slug = parts[0];
+      } else {
+        slug = 'default';
+      }
     }
 
     // Debug log for domain/subdomain extraction
-    console.log('[TENANT DEBUG] Host header:', host, '| hostWithoutPort:', hostWithoutPort, '| slug:', slug);
+    console.log('[TENANT DEBUG] Query subdomain:', req.query.subdomain, '| Host header:', req.headers.host, '| Final slug:', slug);
     
     const collection = dbUtils.getCollection('tenants');
     
