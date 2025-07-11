@@ -41,8 +41,8 @@ router.get('/current', async (req, res) => {
     }
     
     // If still no subdomain, fall back to Host header (for direct API calls)
+    let host = req.headers.host; // e.g., 'clinic3.localhost:8090'
     if (!slug) {
-      const host = req.headers.host; // e.g., 'clinic3.localhost:8090'
       const hostWithoutPort = host.split(':')[0]; // 'clinic3.localhost'
 
       const parts = hostWithoutPort.split('.');
