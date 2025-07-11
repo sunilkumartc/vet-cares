@@ -46,7 +46,14 @@ export default function Clients() {
   const handleSubmit = async (clientData) => {
     try {
       if (editingClient) {
-        await TenantClient.update(editingClient.id, clientData);
+        const clientId = editingClient._id || editingClient.id;
+        console.log('editingClient:', editingClient);
+        console.log('clientId:', clientId);
+        if (!clientId) {
+          alert('Error: No client ID found for update!');
+          return;
+        }
+        await TenantClient.update(clientId, clientData);
       } else {
         await TenantClient.create(clientData);
       }

@@ -35,6 +35,9 @@ app.use(express.static(path.join(__dirname, 'dist')));
 // API Routes
 app.use('/api/tenant', tenantRoutes);
 
+// Health check endpoint
+app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
+
 // Test endpoint
 app.get('/api/test', async (req, res) => {
   try {
@@ -255,18 +258,25 @@ app.get('/api/:entity/:id', async (req, res) => {
   try {
     const { entity, id } = req.params;
     const { tenant_id } = req.query;
-    let objectId;
-    try {
-      objectId = new ObjectId(id);
-    } catch (e) {
-      return res.status(404).json({ error: `${entity} not found` });
+    
+    // Validate the ID parameter
+    if (!id || typeof id !== 'string') {
+      return res.status(400).json({ error: 'Invalid ID provided' });
     }
+    
+    // Validate ObjectId format
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid ObjectId format' });
+    }
+    
+    const objectId = new ObjectId(id);
     const query = { _id: objectId };
     if (tenant_id && tenant_id !== 'null' && tenant_id !== 'undefined') query.tenant_id = tenant_id;
     const result = await dbUtils.getCollection(entity).findOne(query);
     if (!result) return res.status(404).json({ error: `${entity} not found` });
     res.json(dbUtils.formatResponse(result));
   } catch (error) {
+    console.error(`Error getting ${req.params.entity}:`, error);
     res.status(500).json({ error: `Failed to get ${req.params.entity}` });
   }
 });
@@ -490,6 +500,17 @@ app.put('/api/:entity/:id', async (req, res) => {
   try {
     const { entity, id } = req.params;
     const { tenant_id, ...data } = req.body;
+    
+    // Validate the ID parameter
+    if (!id || typeof id !== 'string') {
+      return res.status(400).json({ error: 'Invalid ID provided' });
+    }
+    
+    // Validate ObjectId format
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid ObjectId format' });
+    }
+    
     const collection = dbUtils.getCollection(entity);
     const result = await collection.updateOne(
       { _id: new ObjectId(id), tenant_id },
@@ -509,6 +530,17 @@ app.delete('/api/:entity/:id', async (req, res) => {
   try {
     const { entity, id } = req.params;
     const { tenant_id } = req.query;
+    
+    // Validate the ID parameter
+    if (!id || typeof id !== 'string') {
+      return res.status(400).json({ error: 'Invalid ID provided' });
+    }
+    
+    // Validate ObjectId format
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid ObjectId format' });
+    }
+    
     const collection = dbUtils.getCollection(entity);
     const result = await collection.deleteOne({ _id: new ObjectId(id), tenant_id });
     if (result.deletedCount === 0) {

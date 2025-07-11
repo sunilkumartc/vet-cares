@@ -198,9 +198,11 @@ export default function ClientManagement() {
       switch (formType) {
         case 'client':
           if (editingRecord) {
-                    await ApiClient.update(editingRecord._id || editingRecord.id, formData);
-      } else {
-        await ApiClient.create(formData);
+            console.log('Updating client with editingRecord:', editingRecord);
+            console.log('Client ID being used:', editingRecord._id || editingRecord.id);
+            await ApiClient.update(editingRecord._id || editingRecord.id, formData);
+          } else {
+            await ApiClient.create(formData);
           }
           break;
         case 'pet':
@@ -241,7 +243,7 @@ export default function ClientManagement() {
       
       // If we have a selected client, also reload their specific data
       if (selectedClient) {
-        await loadSelectedClientSpecificData(selectedClient.id);
+        await loadSelectedClientSpecificData(selectedClient._id || selectedClient.id);
       }
       
       alert(`${formType === 'medical' ? 'Medical record' : formType} saved successfully!`);

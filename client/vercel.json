@@ -6,7 +6,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://your-backend-domain.com/api/$1"
+      "destination": "${VITE_API_URL}/api/$1"
     },
     {
       "source": "/(.*)",
@@ -27,12 +27,16 @@
         },
         {
           "key": "Access-Control-Allow-Headers",
-          "value": "Content-Type, Authorization"
+          "value": "Content-Type, Authorization, Host"
+        },
+        {
+          "key": "Access-Control-Allow-Credentials",
+          "value": "true"
         }
       ]
     }
   ],
   "env": {
-    "VITE_API_URL": "https://your-backend-domain.com"
+    "VITE_API_URL": "${VITE_API_URL}"
   }
 } 
