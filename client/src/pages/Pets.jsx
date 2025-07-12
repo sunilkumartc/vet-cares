@@ -60,7 +60,12 @@ export default function Pets() {
   const handleSubmit = async (petData) => {
     try {
       if (editingPet) {
-        await TenantPet.update(editingPet.id, petData);
+        // Use the correct ID field (_id or id)
+        const petId = editingPet._id || editingPet.id;
+        if (!petId) {
+          throw new Error('Pet ID not found');
+        }
+        await TenantPet.update(petId, petData);
       } else {
         await TenantPet.create(petData);
       }
@@ -79,13 +84,19 @@ export default function Pets() {
 
   const handleDelete = async (pet) => {
     try {
+      // Use the correct ID field (_id or id)
+      const petId = pet._id || pet.id;
+      if (!petId) {
+        throw new Error('Pet ID not found');
+      }
+      
       // Find all related data for the pet
       const [appointments, medicalRecords, vaccinations, invoices, memos] = await Promise.all([
-        TenantAppointment.filter({ pet_id: pet.id }),
-        TenantMedicalRecord.filter({ pet_id: pet.id }),
-        TenantVaccination.filter({ pet_id: pet.id }),
-        TenantInvoice.filter({ pet_id: pet.id }),
-        TenantMemo.filter({ pet_id: pet.id })
+        TenantAppointment.filter({ pet_id: petId }),
+        TenantMedicalRecord.filter({ pet_id: petId }),
+        TenantVaccination.filter({ pet_id: petId }),
+        TenantInvoice.filter({ pet_id: petId }),
+        TenantMemo.filter({ pet_id: petId })
       ]);
 
       let warningMessage = `Are you sure you want to delete ${pet.name}?`;
@@ -104,15 +115,15 @@ export default function Pets() {
       if (confirm(warningMessage)) {
         // Delete all related data first
         await Promise.all([
-          ...appointments.map(item => TenantAppointment.delete(item.id)),
-          ...medicalRecords.map(item => TenantMedicalRecord.delete(item.id)),
-          ...vaccinations.map(item => TenantVaccination.delete(item.id)),
-          ...invoices.map(item => TenantInvoice.delete(item.id)),
-          ...memos.map(item => TenantMemo.delete(item.id))
+          ...appointments.map(item => TenantAppointment.delete(item._id || item.id)),
+          ...medicalRecords.map(item => TenantMedicalRecord.delete(item._id || item.id)),
+          ...vaccinations.map(item => TenantVaccination.delete(item._id || item.id)),
+          ...invoices.map(item => TenantInvoice.delete(item._id || item.id)),
+          ...memos.map(item => TenantMemo.delete(item._id || item.id))
         ]);
         
         // Finally delete the pet
-        await TenantPet.delete(pet.id);
+        await TenantPet.delete(petId);
         
         alert('Pet and all related data deleted successfully.');
         loadInitialData();

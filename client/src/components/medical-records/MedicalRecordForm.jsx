@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { AutoCompleteTextarea } from "@/components/ui/auto-complete-textarea";
+import VetSoapTextarea from "@/components/ui/vet-soap-textarea";
 import { FileText, Save, X, PlusCircle, Trash2, Upload, FileIcon, Image, TestTube2, CalendarIcon, PawPrint, Thermometer, HeartPulse, Wind, Droplets } from "lucide-react";
 import { UploadFile } from "@/api/integrations";
 import { Combobox } from "@/components/ui/combobox";
@@ -14,6 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import DocumentViewer from "./DocumentViewer";
+import MedicalFileUpload from "./MedicalFileUpload";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // Helper component for displaying vitals summary
@@ -173,23 +174,6 @@ export default function MedicalRecordForm({ record, pets, clients, veterinarians
     handleChange('medications', newMedications);
   };
 
-  const handleFileUpload = async (file, category) => {
-    setUploading(true);
-    try {
-      const { file_url } = await UploadFile({ file });
-      handleChange(category, [...(formData[category] || []), file_url]);
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      alert('Failed to upload file.');
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const removeFile = (category, index) => {
-    handleChange(category, formData[category].filter((_, i) => i !== index));
-  };
-
   const handleFileView = (fileUrl, fileName, fileType) => {
     setCurrentFile({ url: fileUrl, name: fileName, type: fileType });
     setViewerOpen(true);
@@ -258,19 +242,16 @@ export default function MedicalRecordForm({ record, pets, clients, veterinarians
 
   const FileUploadSection = ({ category, title, icon: Icon }) => (
     <div className="space-y-2 rounded-lg border p-4">
-      <div className="flex items-center justify-between">
-        <Label className="flex items-center gap-2 font-semibold text-gray-800"><Icon className="w-5 h-5 text-blue-600" /> {title}</Label>
-        <Button type="button" variant="outline" size="sm" asChild><label htmlFor={`${category}-upload`} className="cursor-pointer gap-1"><Upload className="w-3 h-3" /> Upload</label></Button>
-        <input type="file" multiple onChange={(e) => Array.from(e.target.files).forEach(file => handleFileUpload(file, category))} className="hidden" id={`${category}-upload`} />
-      </div>
-      <div className="space-y-2">
-        {(formData[category] || []).map((file, index) => (
-          <div key={index} className="flex items-center justify-between bg-gray-50 rounded p-2">
-            <span className="text-sm">{title.slice(0, -1)} {index + 1}</span>
-            <div className="flex gap-1"><Button type="button" variant="ghost" size="sm" onClick={() => handleFileView(file, `${title.slice(0, -1)} ${index + 1}`, 'application/pdf')}>View</Button><Button type="button" variant="ghost" size="sm" onClick={() => removeFile(category, index)}><Trash2 className="w-4 h-4 text-red-500" /></Button></div>
-          </div>
-        ))}
-      </div>
+      <MedicalFileUpload
+        category={category}
+        title={title}
+        icon={Icon}
+        onFilesChange={(files) => handleChange(category, files)}
+        existingFiles={formData[category] || []}
+        maxFiles={10}
+        maxSizeMB={15}
+        onViewFile={handleFileView}
+      />
     </div>
   );
 
@@ -384,25 +365,37 @@ export default function MedicalRecordForm({ record, pets, clients, veterinarians
         <CardContent>
           <form onSubmit={handleSubmit}>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-4"><TabsTrigger value="subjective">Subjective</TabsTrigger><TabsTrigger value="objective">Objective</TabsTrigger><TabsTrigger value="assessment">Assessment</TabsTrigger><TabsTrigger value="plan">Plan</TabsTrigger></TabsList>
+              <TabsList className="grid w-full grid-cols-5">
+                <TabsTrigger value="subjective">Subjective</TabsTrigger>
+                <TabsTrigger value="objective">Objective</TabsTrigger>
+                <TabsTrigger value="assessment">Assessment</TabsTrigger>
+                <TabsTrigger value="plan">Plan</TabsTrigger>
+                <TabsTrigger value="documents">Documents</TabsTrigger>
+              </TabsList>
 
               <TabsContent value="subjective" className="mt-4">
-                <AutoCompleteTextarea
-                  field="subjective"
-                  patient={availablePets.find(p => p.id === formData.pet_id)}
+                <VetSoapTextarea
+                  section="subjective"
                   value={formData.subjective}
                   onChange={(e) => handleChange('subjective', e.target.value)}
+                  species={availablePets.find(p => (p._id || p.id) === formData.pet_id)?.species}
+                  ageGroup={availablePets.find(p => (p._id || p.id) === formData.pet_id)?.age_group}
+                  reason={formData.visit_reason || "general examination"}
+                  doctorId={formData.veterinarian}
                   placeholder="Enter chief complaint, history, and client observations..."
                   rows={12}
                 />
               </TabsContent>
 
               <TabsContent value="objective" className="mt-4 space-y-4">
-                <AutoCompleteTextarea
-                  field="objective"
-                  patient={availablePets.find(p => p.id === formData.pet_id)}
+                <VetSoapTextarea
+                  section="objective"
                   value={formData.objective}
                   onChange={(e) => handleChange('objective', e.target.value)}
+                  species={availablePets.find(p => (p._id || p.id) === formData.pet_id)?.species}
+                  ageGroup={availablePets.find(p => (p._id || p.id) === formData.pet_id)?.age_group}
+                  reason={formData.visit_reason || "general examination"}
+                  doctorId={formData.veterinarian}
                   placeholder="Enter physical examination findings..."
                   rows={8}
                 />
@@ -426,30 +419,31 @@ export default function MedicalRecordForm({ record, pets, clients, veterinarians
                     <div className="space-y-1"><Label>CRT (sec)</Label><Input type="number" step="0.1" value={formData.vitals.capillary_refill_time_sec} onChange={(e) => handleVitalChange('capillary_refill_time_sec', e.target.value)} /></div>
                   </div>
                 </div>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <FileUploadSection category="lab_reports" title="Lab Reports" icon={TestTube2} />
-                  <FileUploadSection category="radiology_reports" title="Radiology Reports" icon={Image} />
-                </div>
-                <FileUploadSection category="other_attachments" title="Other Documents" icon={FileIcon} />
               </TabsContent>
 
               <TabsContent value="assessment" className="mt-4">
-                <AutoCompleteTextarea
-                  field="assessment"
-                  patient={availablePets.find(p => p.id === formData.pet_id)}
+                <VetSoapTextarea
+                  section="assessment"
                   value={formData.assessment}
                   onChange={(e) => handleChange('assessment', e.target.value)}
+                  species={availablePets.find(p => (p._id || p.id) === formData.pet_id)?.species}
+                  ageGroup={availablePets.find(p => (p._id || p.id) === formData.pet_id)?.age_group}
+                  reason={formData.visit_reason || "general examination"}
+                  doctorId={formData.veterinarian}
                   placeholder="Enter diagnosis, differential diagnoses, or assessment of the case..."
                   rows={12}
                 />
               </TabsContent>
 
               <TabsContent value="plan" className="mt-4 space-y-4">
-                <AutoCompleteTextarea
-                  field="plan"
-                  patient={availablePets.find(p => p.id === formData.pet_id)}
+                <VetSoapTextarea
+                  section="plan"
                   value={formData.plan}
                   onChange={(e) => handleChange('plan', e.target.value)}
+                  species={availablePets.find(p => (p._id || p.id) === formData.pet_id)?.species}
+                  ageGroup={availablePets.find(p => (p._id || p.id) === formData.pet_id)?.age_group}
+                  reason={formData.visit_reason || "general examination"}
+                  doctorId={formData.veterinarian}
                   placeholder="Enter treatment plan, further diagnostics, and client communication..."
                   rows={6}
                 />
@@ -466,6 +460,37 @@ export default function MedicalRecordForm({ record, pets, clients, veterinarians
                         <Button type="button" variant="ghost" size="icon" onClick={() => removeMedication(index)}><Trash2 className="w-4 h-4 text-red-500" /></Button>
                       </div>
                     ))}
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="documents" className="mt-4 space-y-6">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Medical Documents</h3>
+                  <p className="text-sm text-gray-600">Upload lab reports, radiology images, and other medical documents related to this visit. All documents are securely stored and organized by category.</p>
+                </div>
+                
+                <div className="grid md:grid-cols-2 gap-6">
+                  <FileUploadSection category="lab_reports" title="Lab Reports" icon={TestTube2} />
+                  <FileUploadSection category="radiology_reports" title="Radiology Reports" icon={Image} />
+                </div>
+                
+                <FileUploadSection category="other_attachments" title="Other Documents" icon={FileIcon} />
+                
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-start space-x-3">
+                    <div className="flex-shrink-0">
+                      <FileText className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-medium text-blue-900">Document Management</h4>
+                      <p className="text-sm text-blue-700 mt-1">
+                        • Files are automatically organized by category and date<br/>
+                        • Secure S3 storage with multi-tenant isolation<br/>
+                        • Preview PDFs and images directly in the browser<br/>
+                        • Maximum 15MB per file, 10 files per category
+                      </p>
+                    </div>
                   </div>
                 </div>
               </TabsContent>

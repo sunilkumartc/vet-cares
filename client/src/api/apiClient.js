@@ -89,11 +89,15 @@ class BaseApiEntity {
     
     // Get current tenant
     const tenant = await this.getCurrentTenant();
+    console.log(`API Client - Filtering ${this.entityName} with tenant:`, tenant);
     if (tenant) {
       params.tenant_id = tenant._id || tenant.id;
     }
     
-    return this.api.get(`/${this.entityName}`, params);
+    console.log(`API Client - Filter params for ${this.entityName}:`, params);
+    const result = await this.api.get(`/${this.entityName}`, params);
+    console.log(`API Client - Filter result for ${this.entityName}:`, result);
+    return result;
   }
 
   async get(id) {
@@ -124,8 +128,11 @@ class BaseApiEntity {
   }
 
   async update(id, data) {
+    console.log(`API Client - Updating ${this.entityName} with ID:`, id);
+    console.log(`API Client - Update data:`, data);
     const tenant = await this.getCurrentTenant();
     const requestData = tenant ? { ...data, tenant_id: tenant._id || tenant.id } : data;
+    console.log(`API Client - Final request data:`, requestData);
     return this.api.put(`/${this.entityName}/${id}`, requestData);
   }
 
@@ -157,11 +164,12 @@ class BaseApiEntity {
 
   async getCurrentTenant() {
     try {
+      console.log('API Client - Getting current tenant...');
       const tenant = await this.api.get('/tenant/current');
-      console.log('API TenantClient - Current tenant:', tenant);
+      console.log('API Client - Current tenant:', tenant);
       return tenant;
     } catch (error) {
-      console.error('Error getting current tenant:', error);
+      console.error('API Client - Error getting current tenant:', error);
       return null;
     }
   }

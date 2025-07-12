@@ -11,6 +11,7 @@ import Pets from "./Pets";
 import MedicalRecords from "./MedicalRecords";
 
 import Vaccinations from "./Vaccinations";
+import VaccineTest from "./VaccineTest";
 
 import Billing from "./Billing";
 
@@ -50,6 +51,8 @@ import InventoryManagement from "./InventoryManagement";
 
 import VaccineSettings from "./VaccineSettings";
 
+import Settings from "./Settings";
+
 import DiagnosticReports from "./DiagnosticReports";
 
 import ReportTemplates from "./ReportTemplates";
@@ -75,6 +78,7 @@ const PAGES = {
     MedicalRecords: MedicalRecords,
     
     Vaccinations: Vaccinations,
+  VaccineTest: VaccineTest,
     
     Billing: Billing,
     
@@ -113,6 +117,8 @@ const PAGES = {
     InventoryManagement: InventoryManagement,
     
     VaccineSettings: VaccineSettings,
+    
+    Settings: Settings,
     
     DiagnosticReports: DiagnosticReports,
     
@@ -161,6 +167,7 @@ function PagesContent() {
                 <Route path="/MedicalRecords" element={<MedicalRecords />} />
                 
                 <Route path="/Vaccinations" element={<Vaccinations />} />
+        <Route path="/VaccineTest" element={<VaccineTest />} />
                 
                 <Route path="/Billing" element={<Billing />} />
                 
@@ -199,6 +206,8 @@ function PagesContent() {
                 <Route path="/InventoryManagement" element={<InventoryManagement />} />
                 
                 <Route path="/VaccineSettings" element={<VaccineSettings />} />
+                
+                <Route path="/Settings" element={<Settings />} />
                 
                 <Route path="/DiagnosticReports" element={<DiagnosticReports />} />
                 

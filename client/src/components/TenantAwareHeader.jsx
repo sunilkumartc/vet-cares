@@ -19,25 +19,28 @@ export const TenantAwareHeader = () => {
               <img 
                 src={getBranding('logo')} 
                 alt="Clinic Logo" 
-                className="h-8 w-auto"
+                className="h-8 w-auto object-contain"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.nextSibling.style.display = 'flex';
+                }}
               />
-            ) : (
-              <div 
-                className="w-8 h-8 rounded-full flex items-center justify-center"
-                style={{ backgroundColor: getColor('primary') }}
-              >
-                <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-            )}
+            ) : null}
+            <div 
+              className={`w-8 h-8 rounded-full flex items-center justify-center ${getBranding('logo') ? 'hidden' : ''}`}
+              style={{ backgroundColor: getColor('primary') }}
+            >
+              <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
             
             <div>
               <h1 
                 className="text-xl font-bold"
                 style={{ color: getColor('text') }}
               >
-                {getBranding('clinicName') || 'TenantPet Clinic'}
+                {getBranding('clinicName') || 'VetVault Clinic'}
               </h1>
               {getBranding('tagline') && (
                 <p 

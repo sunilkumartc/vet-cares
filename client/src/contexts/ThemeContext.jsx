@@ -65,8 +65,17 @@ export const ThemeProvider = ({ children }) => {
   };
 
   const getBranding = (brandingKey) => {
-    if (!theme?.branding) return '';
-    return theme.branding[brandingKey] || '';
+    if (!theme?.tenant) return '';
+    
+    // Map branding keys to tenant fields
+    const brandingMap = {
+      logo: theme.tenant.logo_url,
+      clinicName: theme.tenant.clinic_name || theme.tenant.name,
+      tagline: theme.tenant.tagline,
+      favicon: theme.tenant.favicon_url
+    };
+    
+    return brandingMap[brandingKey] || '';
   };
 
   const hasFeature = (featureKey) => {

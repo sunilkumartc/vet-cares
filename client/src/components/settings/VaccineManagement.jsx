@@ -48,10 +48,16 @@ export default function VaccineManagement() {
     try {
       // Map form data to match database schema
       const vaccineData = {
-        ...formData,
+        name: formData.name,
+        description: formData.description,
+        manufacturer: formData.manufacturer,
         category: formData.vaccine_type, // Map vaccine_type to category
-        duration_months: formData.frequency_months // Map frequency_months to duration_months
+        duration_months: formData.frequency_months, // Map frequency_months to duration_months
+        species: formData.species,
+        is_active: formData.is_active
       };
+      
+      console.log('Saving vaccine data:', vaccineData);
       
       if (editingVaccine) {
         await TenantVaccine.update(editingVaccine.id, vaccineData);
@@ -69,9 +75,10 @@ export default function VaccineManagement() {
   };
 
   const handleEdit = (vaccine) => {
+    console.log('Editing vaccine:', vaccine);
     setEditingVaccine(vaccine);
     setFormData({
-      name: vaccine.name,
+      name: vaccine.name || "",
       vaccine_type: vaccine.vaccine_type || vaccine.category || "core",
       species: vaccine.species || [],
       frequency_months: vaccine.frequency_months || vaccine.duration_months || 12,

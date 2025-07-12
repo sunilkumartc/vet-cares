@@ -2,7 +2,7 @@ import jsPDF from 'jspdf';
 import { format } from 'date-fns';
 
 // Generate PDF for invoice
-export const generateInvoicePDF = async (invoice, client, pet) => {
+export const generateInvoicePDF = async (invoice, client, pet, tenantInfo = null) => {
   const doc = new jsPDF();
   let y = 10;
   const pageHeight = doc.internal.pageSize.height;
@@ -12,14 +12,36 @@ export const generateInvoicePDF = async (invoice, client, pet) => {
   // --- Header ---
   doc.setFontSize(16);
   doc.setFont(undefined, 'bold');
-  doc.text('Dr. Ravi Pet Portal', pageWidth / 2, y, { align: 'center' });
+  
+  // Use tenant clinic name or fallback to default
+  const clinicName = tenantInfo?.clinic_name || tenantInfo?.name || 'Veterinary Clinic';
+  doc.text(clinicName, pageWidth / 2, y, { align: 'center' });
   y += 8;
   
   doc.setFontSize(10);
   doc.setFont(undefined, 'normal');
-  doc.text('No. 32, 4th temple Street road, Malleshwaram, Bengaluru', pageWidth / 2, y, { align: 'center' });
+  
+  // Use tenant address or fallback to default
+  const clinicAddress = tenantInfo?.address || 'Address not configured';
+  doc.text(clinicAddress, pageWidth / 2, y, { align: 'center' });
   y += 5;
-  doc.text('Phone: 082961 43115', pageWidth / 2, y, { align: 'center' });
+  
+  // Use tenant phone or fallback to default
+  const clinicPhone = tenantInfo?.phone || 'Phone not configured';
+  doc.text(`Phone: ${clinicPhone}`, pageWidth / 2, y, { align: 'center' });
+  
+  // Add email if available
+  if (tenantInfo?.email) {
+    y += 5;
+    doc.text(`Email: ${tenantInfo.email}`, pageWidth / 2, y, { align: 'center' });
+  }
+  
+  // Add website if available
+  if (tenantInfo?.website) {
+    y += 5;
+    doc.text(`Website: ${tenantInfo.website}`, pageWidth / 2, y, { align: 'center' });
+  }
+  
   y += 10;
 
   // --- Invoice Header ---
@@ -170,8 +192,14 @@ export const generateInvoicePDF = async (invoice, client, pet) => {
   const footerY = pageHeight - 20;
   doc.setFontSize(8);
   doc.setTextColor(100, 100, 100);
-  doc.text('Thank you for choosing Dr. Ravi Pet Portal', pageWidth / 2, footerY, { align: 'center' });
-  doc.text('For any queries, please contact us at 082961 43115', pageWidth / 2, footerY + 4, { align: 'center' });
+  
+  // Use tenant clinic name in footer
+  const footerClinicName = tenantInfo?.clinic_name || tenantInfo?.name || 'Veterinary Clinic';
+  doc.text(`Thank you for choosing ${footerClinicName}`, pageWidth / 2, footerY, { align: 'center' });
+  
+  // Use tenant phone in footer
+  const footerPhone = tenantInfo?.phone || 'Contact us for queries';
+  doc.text(`For any queries, please contact us at ${footerPhone}`, pageWidth / 2, footerY + 4, { align: 'center' });
 
   return doc;
 }; 

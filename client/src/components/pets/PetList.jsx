@@ -22,7 +22,7 @@ const speciesColors = {
 
 export default function PetList({ pets, clients, loading, onEdit, onDelete }) {
   const getClientName = (clientId) => {
-    const client = clients.find(c => c.id === clientId);
+    const client = clients.find(c => (c._id || c.id) === clientId);
     return client ? `${client.first_name} ${client.last_name}` : 'Unknown Owner';
   };
 
@@ -82,7 +82,7 @@ export default function PetList({ pets, clients, loading, onEdit, onDelete }) {
   return (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
       {pets.map((pet) => (
-        <Card key={pet.id} className="hover:shadow-lg transition-all duration-300 overflow-hidden">
+        <Card key={pet._id || pet.id} className="hover:shadow-lg transition-all duration-300 overflow-hidden">
           <CardContent className="p-0">
             {/* TenantPet Photo or Placeholder */}
             <div className="h-48 bg-gradient-to-br from-blue-50 to-indigo-100 relative overflow-hidden">
@@ -209,7 +209,7 @@ export default function PetList({ pets, clients, loading, onEdit, onDelete }) {
 
               {/* Medical Actions */}
               <div className="flex gap-2 pt-2 border-t border-gray-100">
-                <Link to={createPageUrl(`PetMedicalHistory?pet=${pet.id}`)} className="w-full">
+                <Link to={createPageUrl(`PetMedicalHistory?pet=${pet._id || pet.id}`)} className="w-full">
                   <Button
                     variant="outline"
                     size="sm"

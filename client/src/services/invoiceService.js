@@ -19,9 +19,13 @@ export const sendInvoice = async (invoiceId) => {
       invoice.pet_id ? TenantPet.get(invoice.pet_id) : null
     ]);
 
+    // 2. Get tenant information for PDF header/footer
+    const currentTenant = TenantManager.getCurrentTenant();
+    console.log('Current tenant for PDF:', currentTenant);
+    
     // 2. Generate PDF
     console.log('Generating PDF for invoice:', invoice.invoice_number);
-    const pdfDoc = await generateInvoicePDF(invoice, client, pet);
+    const pdfDoc = await generateInvoicePDF(invoice, client, pet, currentTenant);
     
     // Convert PDF to blob and then to File
     const pdfBlob = pdfDoc.output('blob');
@@ -34,8 +38,7 @@ export const sendInvoice = async (invoiceId) => {
 
     // 3. Upload PDF to S3 and get public URL
     console.log('Uploading PDF to S3...');
-    const tenant = TenantManager.getCurrentTenant();
-    const fileName = generateInvoiceFileName(invoice.invoice_number, tenant?.slug || 'default');
+    const fileName = generateInvoiceFileName(invoice.invoice_number, currentTenant?.slug || 'default');
     console.log('Generated filename:', fileName);
     
     // Upload to S3 with public-read ACL and get public URL

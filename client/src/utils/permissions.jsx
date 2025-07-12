@@ -17,6 +17,7 @@ export const PERMISSION_MAP = {
   'Analytics': 'analytics',
   'SalesDispense': 'sales_dispense',
   'VaccineSettings': 'vaccine_settings',
+  'Settings': 'settings',
   
   // Action permissions
   'create_appointment': 'appointments',

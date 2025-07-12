@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Settings, Shield, Bell, Database } from 'lucide-react';
+import { Settings as SettingsIcon, Shield, Bell, Database, Building2 } from 'lucide-react';
 import VaccineManagement from '../components/settings/VaccineManagement';
+import ClinicProfile from '../components/settings/ClinicProfile';
 
 export default function Settings() {
-  const [activeTab, setActiveTab] = useState('vaccines');
+  const [activeTab, setActiveTab] = useState('profile');
 
   return (
     <div className="p-4 md:p-8">
       <div className="mb-6">
         <h1 className="text-3xl font-bold flex items-center gap-2">
-          <Settings className="w-8 h-8" />
+          <SettingsIcon className="w-8 h-8" />
           Settings
         </h1>
         <p className="text-gray-600 mt-2">
@@ -20,7 +21,11 @@ export default function Settings() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="profile" className="flex items-center gap-2">
+            <Building2 className="w-4 h-4" />
+            Profile
+          </TabsTrigger>
           <TabsTrigger value="vaccines" className="flex items-center gap-2">
             <Shield className="w-4 h-4" />
             Vaccines
@@ -34,6 +39,10 @@ export default function Settings() {
             System
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="profile" className="space-y-6">
+          <ClinicProfile />
+        </TabsContent>
 
         <TabsContent value="vaccines" className="space-y-6">
           <Card>

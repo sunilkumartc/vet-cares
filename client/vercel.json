@@ -6,7 +6,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "${VITE_API_URL}/api/$1"
+      "destination": "https://api.vetvault.in/api/$1"
     },
     {
       "source": "/(.*)",
@@ -15,7 +15,7 @@
   ],
   "headers": [
     {
-      "source": "/api/(.*)",
+      "source": "/(.*)",
       "headers": [
         {
           "key": "Access-Control-Allow-Origin",
@@ -35,8 +35,5 @@
         }
       ]
     }
-  ],
-  "env": {
-    "VITE_API_URL": "${VITE_API_URL}"
-  }
+  ]
 } 

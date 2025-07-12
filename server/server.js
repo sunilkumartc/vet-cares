@@ -20,6 +20,10 @@ import {
 import AWS from 'aws-sdk';
 import tenantRoutes from './routes/tenant.js';
 import publicRoutes from './routes/public.js';
+import soapSuggestionsRoutes from './routes/soap-suggestions.js';
+import vetSoapSuggestRoutes from './routes/vet-soap-suggest.js';
+import medicalFilesRoutes from './routes/medical-files.js';
+import clinicProfileRoutes from './routes/clinic-profile.js';
 import { dbUtils } from './lib/mongodb.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -70,6 +74,10 @@ app.use(express.static(path.join(__dirname, 'dist')));
 // API Routes
 app.use('/api/tenant', tenantRoutes);
 app.use('/api/public', publicRoutes);
+app.use('/api/soap', soapSuggestionsRoutes);
+app.use('/api', vetSoapSuggestRoutes);
+app.use('/api', medicalFilesRoutes);
+app.use('/api/clinic', clinicProfileRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
@@ -230,7 +238,7 @@ app.put('/api/staff/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { tenant_id, ...data } = req.body;
-    const collection = db.collection('staff');
+    const collection = dbUtils.getCollection('staff');
     const result = await collection.updateOne(
       { _id: new ObjectId(id), tenant_id },
       { $set: { ...data, updated_date: new Date() } }
@@ -249,7 +257,7 @@ app.delete('/api/staff/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { tenant_id } = req.query;
-    const collection = db.collection('staff');
+    const collection = dbUtils.getCollection('staff');
     const result = await collection.deleteOne({ _id: new ObjectId(id), tenant_id });
     if (result.deletedCount === 0) {
       return res.status(404).json({ error: 'Staff not found' });
@@ -346,6 +354,17 @@ app.post('/api/upload-to-s3', s3Upload.single('file'), async (req, res) => {
     const AWS_S3_REGION = process.env.AWS_S3_REGION || 'eu-north-1';
     const AWS_S3_BUCKET = process.env.AWS_S3_BUCKET || 'vetinvoice';
 
+    // Check if S3 is configured
+    if (!AWS_S3_ACCESS_KEY_ID || !AWS_S3_SECRET_ACCESS_KEY) {
+      console.warn('S3 credentials not configured, returning error');
+      return res.status(500).json({ 
+        success: false, 
+        error: 'S3 not configured',
+        details: 'AWS S3 credentials are not set. Please configure AWS_S3_ACCESS_KEY_ID and AWS_S3_SECRET_ACCESS_KEY environment variables.',
+        code: 'S3_NOT_CONFIGURED'
+      });
+    }
+
     console.log('AWS S3 Config:', {
       region: AWS_S3_REGION,
       bucket: AWS_S3_BUCKET,
@@ -366,7 +385,9 @@ app.post('/api/upload-to-s3', s3Upload.single('file'), async (req, res) => {
 
     // Use custom fileName from request body, fallback to original name
     const customFileName = req.body.fileName || req.file.originalname;
-    const s3Key = customFileName.startsWith('invoice/') ? customFileName : `invoice/${customFileName}`;
+    // Only add invoice/ prefix if it's not already a clinic-logo or other specific path
+    const s3Key = customFileName.startsWith('invoice/') || customFileName.startsWith('clinic-logos/') ? 
+      customFileName : `invoice/${customFileName}`;
     
     const params = {
       Bucket: AWS_S3_BUCKET,
@@ -430,6 +451,48 @@ app.post('/api/upload-to-s3', s3Upload.single('file'), async (req, res) => {
       error: errorMessage,
       details: error.message,
       code: error.code
+    });
+  }
+});
+
+// Check S3 configuration status
+app.get('/api/s3-status', async (req, res) => {
+  try {
+    // Set headers to prevent caching
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+
+    const AWS_S3_ACCESS_KEY_ID = process.env.AWS_S3_ACCESS_KEY_ID;
+    const AWS_S3_SECRET_ACCESS_KEY = process.env.AWS_S3_SECRET_ACCESS_KEY;
+    const AWS_S3_REGION = process.env.AWS_S3_REGION || 'eu-north-1';
+    const AWS_S3_BUCKET = process.env.AWS_S3_BUCKET || 'vetinvoice';
+
+    const isConfigured = !!(AWS_S3_ACCESS_KEY_ID && AWS_S3_SECRET_ACCESS_KEY);
+
+    console.log('S3 Status Check:', {
+      configured: isConfigured,
+      region: AWS_S3_REGION,
+      bucket: AWS_S3_BUCKET,
+      hasAccessKey: !!AWS_S3_ACCESS_KEY_ID,
+      hasSecretKey: !!AWS_S3_SECRET_ACCESS_KEY
+    });
+
+    res.json({
+      success: true,
+      configured: isConfigured,
+      region: AWS_S3_REGION,
+      bucket: AWS_S3_BUCKET,
+      hasAccessKey: !!AWS_S3_ACCESS_KEY_ID,
+      hasSecretKey: !!AWS_S3_SECRET_ACCESS_KEY
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to check S3 status',
+      details: error.message
     });
   }
 });
@@ -586,6 +649,115 @@ app.delete('/api/:entity/:id', async (req, res) => {
   } catch (error) {
     console.error(`Error deleting ${req.params.entity}:`, error);
     res.status(500).json({ error: `Failed to delete ${req.params.entity}` });
+  }
+});
+
+// Vaccines API endpoints
+app.get('/api/vaccines', async (req, res) => {
+  try {
+    const { tenant_id, is_active, sort } = req.query;
+    console.log('Vaccines API - Request query:', req.query);
+    console.log('Vaccines API - tenant_id:', tenant_id);
+    
+    const collection = dbUtils.getCollection('vaccines');
+    
+    const query = buildTenantQuery(tenant_id, req.query);
+    console.log('Vaccines API - Built query:', query);
+    
+    // Handle is_active filter
+    if (is_active !== undefined) {
+      query.is_active = is_active === 'true';
+    }
+    
+    console.log('Vaccines API - Final query:', query);
+    
+    let cursor = collection.find(query);
+    
+    // Apply sorting
+    if (sort) {
+      cursor = cursor.sort(sort === 'name' ? { name: 1 } : { created_date: -1 });
+    } else {
+      cursor = cursor.sort({ name: 1 }); // Default sort by name
+    }
+    
+    const vaccines = await cursor.toArray();
+    console.log('Vaccines API - Found vaccines:', vaccines.length);
+    console.log('Vaccines API - First vaccine:', vaccines[0]);
+    
+    res.json(dbUtils.formatResponse(vaccines));
+  } catch (error) {
+    console.error('Error fetching vaccines:', error);
+    res.status(500).json({ error: 'Failed to fetch vaccines' });
+  }
+});
+
+app.post('/api/vaccines', async (req, res) => {
+  try {
+    const { tenant_id, ...data } = req.body;
+    const collection = dbUtils.getCollection('vaccines');
+    
+    const vaccine = {
+      _id: new ObjectId(),
+      tenant_id,
+      ...data,
+      created_date: new Date(),
+      updated_date: new Date()
+    };
+    
+    await collection.insertOne(vaccine);
+    res.json(dbUtils.formatResponse(vaccine));
+  } catch (error) {
+    console.error('Error creating vaccine:', error);
+    res.status(500).json({ error: 'Failed to create vaccine' });
+  }
+});
+
+app.put('/api/vaccines/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { tenant_id, ...data } = req.body;
+    
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid ObjectId format' });
+    }
+    
+    const collection = dbUtils.getCollection('vaccines');
+    const result = await collection.updateOne(
+      { _id: new ObjectId(id), tenant_id },
+      { $set: { ...data, updated_date: new Date() } }
+    );
+    
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ error: 'Vaccine not found' });
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error updating vaccine:', error);
+    res.status(500).json({ error: 'Failed to update vaccine' });
+  }
+});
+
+app.delete('/api/vaccines/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { tenant_id } = req.query;
+    
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid ObjectId format' });
+    }
+    
+    const collection = dbUtils.getCollection('vaccines');
+    const result = await collection.deleteOne({ _id: new ObjectId(id), tenant_id });
+    
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ error: 'Vaccine not found' });
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting vaccine:', error);
+    res.status(500).json({ error: 'Failed to delete vaccine' });
   }
 });
 

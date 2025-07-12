@@ -18,16 +18,13 @@ export class TenantManager {
       const slug = this.extractTenantSlug(host);
       if (!slug) return null;
 
-      // Clear cache for this slug to ensure fresh data
+      // Always clear cache for this slug to ensure fresh data
       tenantCache.delete(slug);
+      
+      // Also clear localStorage cache to prevent stale data
+      localStorage.removeItem('currentTenant');
 
-      // Check cache first
-      const cached = tenantCache.get(slug);
-      if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-        return cached.tenant;
-      }
-
-      // Fetch tenant from backend
+      // Fetch tenant from backend with cache-busting
       const tenant = await this.fetchTenantBySlug(slug);
       if (tenant) {
         // Validate tenant status
@@ -35,13 +32,22 @@ export class TenantManager {
           throw new Error(`Tenant ${slug} is not active`);
         }
 
+        // Validate that the tenant matches the expected subdomain
+        if (tenant.subdomain && tenant.subdomain !== slug) {
+          console.warn(`Tenant subdomain mismatch: expected ${slug}, got ${tenant.subdomain}`);
+        }
+
         // Track usage
         this.trackUsage(tenant.id, 'page_view');
 
+        // Cache the tenant with current timestamp
         tenantCache.set(slug, {
           tenant,
           timestamp: Date.now()
         });
+        
+        // Also store in localStorage for persistence
+        this.setCurrentTenant(tenant);
       }
 
       return tenant;
@@ -76,17 +82,24 @@ export class TenantManager {
   static async fetchTenantBySlug(slug) {
     try {
       // Use the backend API instead of direct MongoDB access
-      const response = await fetch(`http://localhost:3001/api/tenant/current`, {
+      // Add cache-busting parameter to prevent browser caching
+      const cacheBuster = Date.now();
+      const response = await fetch(`/api/tenant/current?_t=${cacheBuster}`, {
         headers: {
-          'Host': `${slug}.localhost:3001`
+          'Host': window.location.host,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
         }
       });
       
       if (response.ok) {
         const tenant = await response.json();
+        console.log(`[TENANT] Fetched tenant for ${slug}:`, tenant.name, tenant.subdomain);
         return tenant;
       }
       
+      console.error(`[TENANT] Failed to fetch tenant for ${slug}:`, response.status, response.statusText);
       return null;
     } catch (error) {
       console.error('Error fetching tenant:', error);
@@ -129,7 +142,7 @@ export class TenantManager {
 
   static async getTenantById(tenantId) {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/tenant/${tenantId || 'current'}`);
+      const response = await fetch(`/api/tenant/${tenantId || 'current'}`);
       if (response.ok) {
         const tenant = await response.json();
         return tenant;
@@ -143,7 +156,7 @@ export class TenantManager {
 
   static async getTenantUsage(tenantId) {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/tenant/${tenantId}/usage`);
+      const response = await fetch(`/api/tenant/${tenantId}/usage`);
       if (response.ok) {
         const usage = await response.json();
         return usage;

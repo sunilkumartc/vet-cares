@@ -19,6 +19,7 @@ import { ApiClient_entity as ApiClient, ApiPet, ApiMedicalRecord } from "@/api/a
 import { hasPageAccess, getCurrentUser, filterByTenant } from "@/utils/permissions.jsx";
 import { format } from "date-fns";
 import ClientForm from "../components/clients/ClientForm";
+import { useTheme } from "@/contexts/ThemeContext";
 
 const adminNavigation = [
   { title: "Dashboard", url: createPageUrl("Dashboard"), icon: Heart },
@@ -33,6 +34,7 @@ const adminNavigation = [
 ];
 
 const settingsNavigation = [
+  { title: "Settings", url: createPageUrl("Settings"), icon: Settings },
   { title: "Client Management", url: createPageUrl("Clients"), icon: Users },
   { title: "Pet Management", url: createPageUrl("Pets"), icon: PawPrint },
   { title: "Vaccine Settings", url: createPageUrl("VaccineSettings"), icon: Syringe },
@@ -48,6 +50,9 @@ const clientNavigation = [
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { getColor, getBranding, getTenantInfo } = useTheme();
+  const tenant = getTenantInfo();
+  
   const [user, setUser] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
   const [loggingOut, setLoggingOut] = React.useState(false);
@@ -218,7 +223,7 @@ export default function Layout({ children, currentPageName }) {
     return <>{children}</>;
   }
 
-  const adminPages = ['Dashboard', 'Analytics', 'Appointments', 'ClientManagement', 'Clients', 'Pets', 'MedicalRecords', 'Vaccinations', 'Billing', 'StaffManagement', 'PetMedicalHistory', 'InvoiceDetails', 'PetDetails', 'ClientDetails', 'SalesDispense', 'InventoryManagement', 'VaccineSettings', 'DiagnosticReports', 'ReportTemplates'];
+  const adminPages = ['Dashboard', 'Analytics', 'Appointments', 'ClientManagement', 'Clients', 'Pets', 'MedicalRecords', 'Vaccinations', 'Billing', 'StaffManagement', 'PetMedicalHistory', 'InvoiceDetails', 'PetDetails', 'ClientDetails', 'SalesDispense', 'InventoryManagement', 'VaccineSettings', 'DiagnosticReports', 'ReportTemplates', 'Settings'];
   const isAdminPage = adminPages.includes(currentPageName);
 
   if (loading || loggingOut) {
@@ -257,12 +262,33 @@ export default function Layout({ children, currentPageName }) {
             <Sidebar className="border-r border-gray-200 bg-white">
               <SidebarHeader>
                 <div className="flex items-center gap-3 p-4">
-                  <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
-                      <Heart className="w-6 h-6 text-white" />
+                  {console.log('Sidebar branding - logo:', getBranding('logo'), 'clinicName:', getBranding('clinicName'))}
+                  {getBranding('logo') ? (
+                    <img 
+                      src={getBranding('logo')} 
+                      alt="Clinic Logo" 
+                      className="w-10 h-10 object-contain rounded-lg"
+                      onError={(e) => {
+                        console.warn('Logo failed to load:', getBranding('logo'));
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                      }}
+                      onLoad={() => {
+                        console.log('Logo loaded successfully:', getBranding('logo'));
+                      }}
+                    />
+                  ) : null}
+                  <div 
+                    className={`w-10 h-10 rounded-lg flex items-center justify-center ${getBranding('logo') ? 'hidden' : ''}`}
+                    style={{ backgroundColor: getColor('primary') }}
+                  >
+                    <Heart className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                      <h2 className="text-base font-bold text-gray-800">{window?.portalName || 'Clinic Portal'}</h2>
-                      <p className="text-xs text-gray-500">Staff Portal</p>
+                    <h2 className="text-base font-bold text-gray-800">
+                      {getBranding('clinicName') || window?.portalName || 'Clinic Portal'}
+                    </h2>
+                    <p className="text-xs text-gray-500">Staff Portal</p>
                   </div>
                 </div>
               </SidebarHeader>

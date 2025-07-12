@@ -11,6 +11,7 @@ import { ArrowLeft, Printer, Download, Share2, Heart, Mail, Phone, PawPrint, Bui
 import { format } from 'date-fns';
 import { toast } from '@/components/ui/use-toast';
 import { sendInvoice, canSendInvoice } from '@/services/invoiceService';
+import { TenantManager } from '@/lib/tenant';
 
 const statusColors = {
   draft: "bg-gray-100 text-gray-800",
@@ -24,6 +25,7 @@ export default function InvoiceDetails() {
   const [invoice, setInvoice] = useState(null);
   const [client, setClient] = useState(null);
   const [pet, setPet] = useState(null);
+  const [tenant, setTenant] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isStaff, setIsStaff] = useState(false);
@@ -54,13 +56,15 @@ export default function InvoiceDetails() {
         
         if (invoiceData) {
           setInvoice(invoiceData);
-          // Fetch client and pet details concurrently
-          const [clientData, petData] = await Promise.all([
+          // Fetch client, pet, and tenant details concurrently
+          const [clientData, petData, tenantData] = await Promise.all([
             invoiceData.client_id ? TenantClient.get(invoiceData.client_id) : Promise.resolve(null),
-            invoiceData.pet_id ? TenantPet.get(invoiceData.pet_id) : Promise.resolve(null)
+            invoiceData.pet_id ? TenantPet.get(invoiceData.pet_id) : Promise.resolve(null),
+            Promise.resolve(TenantManager.getCurrentTenant())
           ]);
           setClient(clientData);
           setPet(petData);
+          setTenant(tenantData);
         } else {
           setError('Invoice not found');
           toast({
@@ -205,8 +209,18 @@ export default function InvoiceDetails() {
                     <Heart className="w-7 h-7 text-blue-600" />
                   </div>
                   <div>
-                    <h2 className="text-2xl font-bold text-gray-900">Dr. Ravi Pet Portal</h2>
-                    <p className="text-gray-500">No. 32, 4th temple Street road, Malleshwaram, Bengaluru</p>
+                    <h2 className="text-2xl font-bold text-gray-900">
+                      {tenant?.clinic_name || tenant?.name || 'Veterinary Clinic'}
+                    </h2>
+                    <p className="text-gray-500">
+                      {tenant?.address || 'Address not configured'}
+                    </p>
+                    {tenant?.phone && (
+                      <p className="text-gray-500">Phone: {tenant.phone}</p>
+                    )}
+                    {tenant?.email && (
+                      <p className="text-gray-500">Email: {tenant.email}</p>
+                    )}
                   </div>
                 </div>
               </div>

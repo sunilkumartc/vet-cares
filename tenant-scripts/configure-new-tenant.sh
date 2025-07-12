@@ -3,7 +3,7 @@
 # New Tenant Configuration Script
 # This script creates and configures a new tenant with all necessary settings
 
-BASE_URL="http://localhost:3001"
+BASE_URL="https://app.vetvault.in"
 
 echo "🏥 Vet Cares - New Tenant Configuration"
 echo "======================================="

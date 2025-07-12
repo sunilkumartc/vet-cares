@@ -48,7 +48,8 @@ export default function VaccinationForm({ vaccination, pets, clients, veterinari
 
   const [formData, setFormData] = useState(getInitialFormData());
   const [availablePets, setAvailablePets] = useState([]);
-  const [availableVaccines, setAvailableVaccines] = useState([]); // New state for vaccines
+  const [allVaccines, setAllVaccines] = useState([]); // All vaccines from database/fallback
+  const [availableVaccines, setAvailableVaccines] = useState([]); // Filtered vaccines for display
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -65,6 +66,7 @@ export default function VaccinationForm({ vaccination, pets, clients, veterinari
 
   // Load vaccines when component mounts
   useEffect(() => {
+    console.log('VaccinationForm - Component mounted, loading vaccines...');
     loadVaccines();
   }, []);
 
@@ -73,64 +75,92 @@ export default function VaccinationForm({ vaccination, pets, clients, veterinari
     if (formData.pet_id) {
       const selectedPet = pets.find(p => (p._id || p.id) === (formData.pet_id || formData._id));
       if (selectedPet) {
+        console.log('Pet selected, filtering vaccines for species:', selectedPet.species);
         filterVaccinesBySpecies(selectedPet.species);
       }
     } else {
-      // If no pet is selected, or pet_id is cleared, show all original available vaccines
-      // To correctly show all when pet is cleared, we should retain the full list somewhere.
-      // For simplicity, let's re-trigger loadVaccines if pet_id is empty, but this might be inefficient.
-      // A better approach would be to have `allVaccines` state and `displayedVaccines` state.
-      // For this specific change request, I'll keep the existing `availableVaccines` and modify `filterVaccinesBySpecies`
-      // to handle the no-pet-selected case if it's explicitly set.
+      // If no pet is selected, show all vaccines
+      console.log('No pet selected, showing all vaccines');
+      setAvailableVaccines(allVaccines);
     }
-  }, [formData.pet_id, pets, availableVaccines]); // Added availableVaccines to dependency array for clarity
+  }, [formData.pet_id, pets, allVaccines]); // Changed dependency to allVaccines instead of availableVaccines
 
   const loadVaccines = async () => {
     setLoading(true);
     try {
-      const vaccines = await TenantVaccine.filter({ is_active: true }, 'name');
-      setAvailableVaccines(vaccines);
+      // Load all vaccines (not filtering by is_active since the database doesn't have this field yet)
+      const vaccines = await TenantVaccine.filter({}, 'name');
+      console.log('Loaded vaccines from database:', vaccines);
+      
+      let vaccineList = [];
+      if (vaccines && vaccines.length > 0) {
+        // Transform database vaccines to match expected format
+        vaccineList = vaccines.map(vaccine => ({
+          ...vaccine,
+          vaccine_type: vaccine.vaccine_type || vaccine.category || 'core', // Map category to vaccine_type
+          frequency_months: vaccine.frequency_months || vaccine.duration_months || 12, // Map duration_months to frequency_months
+          species: vaccine.species || [], // Add empty species array if not present
+          is_active: vaccine.is_active !== undefined ? vaccine.is_active : true // Add is_active field
+        }));
+        console.log('Transformed vaccines:', vaccineList);
+      } else {
+        console.log('No vaccines found in database, using fallback list');
+        // Fallback to hardcoded list if no vaccines configured
+        vaccineList = [
+          { name: "Rabies", vaccine_type: "required_by_law", species: ["dog", "cat"], frequency_months: 12 },
+          { name: "DHPPiL", vaccine_type: "core", species: ["dog"], frequency_months: 12 },
+          { name: "Kennel Cough", vaccine_type: "core", species: ["dog"], frequency_months: 12 },
+          { name: "FVRCP", vaccine_type: "core", species: ["cat"], frequency_months: 12 },
+          { name: "FeLV", vaccine_type: "non_core", species: ["cat"], frequency_months: 12 }
+        ];
+      }
+      
+      setAllVaccines(vaccineList);
+      setAvailableVaccines(vaccineList); // Initially show all vaccines
     } catch (error) {
       console.error('Error loading vaccines:', error);
       // Fallback to hardcoded list if entity fails
-      setAvailableVaccines([
-        { name: "Rabies", vaccine_type: "required_by_law", species: ["dog", "cat"] },
-        { name: "DHPPiL", vaccine_type: "core", species: ["dog"] },
-        { name: "Kennel Cough", vaccine_type: "core", species: ["dog"] },
-        { name: "FVRCP", vaccine_type: "core", species: ["cat"] },
-        { name: "FeLV", vaccine_type: "non_core", species: ["cat"] }
-      ]);
+      const fallbackVaccines = [
+        { name: "Rabies", vaccine_type: "required_by_law", species: ["dog", "cat"], frequency_months: 12 },
+        { name: "DHPPiL", vaccine_type: "core", species: ["dog"], frequency_months: 12 },
+        { name: "Kennel Cough", vaccine_type: "core", species: ["dog"], frequency_months: 12 },
+        { name: "FVRCP", vaccine_type: "core", species: ["cat"], frequency_months: 12 },
+        { name: "FeLV", vaccine_type: "non_core", species: ["cat"], frequency_months: 12 }
+      ];
+      setAllVaccines(fallbackVaccines);
+      setAvailableVaccines(fallbackVaccines);
     } finally {
       setLoading(false);
     }
   };
 
   const filterVaccinesBySpecies = (species) => {
-    // We need the original, unfiltered list of vaccines to properly filter each time.
-    // Let's assume `availableVaccines` after `loadVaccines` is the full list.
-    // This is a simplification; ideally, we'd have `allVaccines` and `filteredVaccines`.
-    const currentFullVaccineList = availableVaccines.length > 0 ? availableVaccines : [
-      // Fallback if availableVaccines is not yet loaded or empty, this should be consistent with loadVaccines fallback
-      { name: "Rabies", vaccine_type: "required_by_law", species: ["dog", "cat"] },
-      { name: "DHPPiL", vaccine_type: "core", species: ["dog"] },
-      { name: "Kennel Cough", vaccine_type: "core", species: ["dog"] },
-      { name: "FVRCP", vaccine_type: "core", species: ["cat"] },
-      { name: "FeLV", vaccine_type: "non_core", species: ["cat"] }
-    ];
+    console.log('Filtering vaccines by species:', species);
+    console.log('All vaccines:', allVaccines);
+    
+    if (!species || allVaccines.length === 0) {
+      console.log('No species selected or no vaccines available, showing all vaccines');
+      setAvailableVaccines(allVaccines);
+      return;
+    }
 
-    const filtered = currentFullVaccineList.filter(vaccine =>
-      !vaccine.species || vaccine.species.length === 0 || vaccine.species.includes(species)
-    );
-    // This currently updates `availableVaccines` to the filtered list.
-    // This means subsequent calls to `filterVaccinesBySpecies` will filter an already filtered list.
-    // For proper filtering, we need to load ALL vaccines once and filter from that master list.
-    // Given the current structure, I'll keep the simple filter on `availableVaccines` but note this potential issue.
-    // A better fix would be:
-    // const [allVaccinesLoaded, setAllVaccinesLoaded] = useState([]);
-    // useEffect(() => { loadVaccinesIntoAllVaccinesLoaded(); }, []);
-    // then filter from `allVaccinesLoaded` into `displayedVaccines`.
-    // For this specific change, I'm maintaining the existing logic flow but aware of its limitations.
-    setAvailableVaccines(filtered); // This is the source of the issue for re-filtering
+    const filtered = allVaccines.filter(vaccine => {
+      // Handle cases where vaccine.species might be undefined, null, or not an array
+      const vaccineSpecies = vaccine.species || [];
+      const isArray = Array.isArray(vaccineSpecies);
+      
+      if (!isArray || vaccineSpecies.length === 0) {
+        console.log(`Vaccine ${vaccine.name} has no species restrictions, including it`);
+        return true; // Include vaccines with no species restrictions
+      }
+      
+      const includesSpecies = vaccineSpecies.includes(species);
+      console.log(`Vaccine ${vaccine.name} species: ${vaccineSpecies}, includes ${species}: ${includesSpecies}`);
+      return includesSpecies;
+    });
+    
+    console.log('Filtered vaccines:', filtered);
+    setAvailableVaccines(filtered);
   };
 
   const handleChange = (field, value) => {

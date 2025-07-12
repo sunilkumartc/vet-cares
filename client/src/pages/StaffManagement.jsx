@@ -83,7 +83,13 @@ export default function StaffManagement() {
       }
 
       if (editingStaff) {
-        await TenantStaff.update(editingStaff.id, dataToSubmit);
+        // Use the correct ID field (_id or id)
+        const staffId = editingStaff._id || editingStaff.id;
+        if (!staffId) {
+          throw new Error('Staff ID not found');
+        }
+        console.log('Updating staff with ID:', staffId);
+        await TenantStaff.update(staffId, dataToSubmit);
       } else {
         // Generate employee ID if not provided
         if (!dataToSubmit.employee_id) {
@@ -112,7 +118,13 @@ export default function StaffManagement() {
     
     if (confirm(confirmMessage)) {
       try {
-        await TenantStaff.delete(staffMember.id);
+        // Use the correct ID field (_id or id)
+        const staffId = staffMember._id || staffMember.id;
+        if (!staffId) {
+          throw new Error('Staff ID not found');
+        }
+        console.log('Deleting staff with ID:', staffId);
+        await TenantStaff.delete(staffId);
         alert('Staff member deleted successfully.');
         loadInitialData();
       } catch (error) {
