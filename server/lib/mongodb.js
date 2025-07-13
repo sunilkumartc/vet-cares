@@ -51,14 +51,11 @@ class MongoDBManager {
         w: 'majority',
       };
 
-      // Add SSL options for MongoDB Atlas
+      // Add TLS options for MongoDB Atlas
       if (isProduction) {
-        options.ssl = true;
-        options.sslValidate = true;
         options.tls = true;
         options.tlsAllowInvalidCertificates = false;
         options.tlsAllowInvalidHostnames = false;
-        options.tlsInsecure = false;
       }
 
       this.client = new MongoClient(uri, options);

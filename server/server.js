@@ -70,7 +70,6 @@ const corsOptions = {
 // Middleware
 app.use(cors(corsOptions));
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'dist')));
 
 // API Routes
 app.use('/api/tenant', tenantRoutes);
@@ -2858,9 +2857,20 @@ function aggregateVitalData(vitalData, resolution, metric) {
 
 
 
-// Serve React app
+// API catch-all route
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+  res.status(404).json({ 
+    error: 'API endpoint not found',
+    message: 'This is the Vet Cares API server. Please use the correct API endpoints.',
+    availableEndpoints: [
+      '/api/health',
+      '/api/tenant',
+      '/api/public',
+      '/api/soap',
+      '/api/clinic',
+      '/api/otp'
+    ]
+  });
 });
 
 // Start server
