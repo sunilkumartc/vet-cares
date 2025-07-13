@@ -3,18 +3,20 @@ import React, { forwardRef, useRef } from "react";
 const PrescriptionPrintView = forwardRef(({ clinic, owner, pet, medicalRecord, doctor }, ref) => {
   const pdfRef = useRef();
 
-  const handleDownloadPDF = async () => {
-    const html2pdf = (await import('html2pdf.js')).default;
-    const element = pdfRef.current;
-    html2pdf()
-      .from(element)
-      .set({
-        margin: 0.5,
-        filename: `Prescription-${pet?.name || 'pet'}.pdf`,
-        html2canvas: { scale: 2 },
-        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-      })
-      .save();
+  const handleDownloadPDF = () => {
+    if (window.html2pdf) {
+      window.html2pdf()
+        .from(pdfRef.current)
+        .set({
+          margin: 0.5,
+          filename: `Prescription-${pet?.name || 'pet'}.pdf`,
+          html2canvas: { scale: 2 },
+          jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+        })
+        .save();
+    } else {
+      alert('PDF library not loaded!');
+    }
   };
 
   // Helper for safe field access
