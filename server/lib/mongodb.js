@@ -25,7 +25,7 @@ class MongoDBManager {
         // Server-side
         if (isProduction) {
           // Production: Use MongoDB Atlas
-          uri = process.env.MONGODB_URI || 'mongodb+srv://sunilkumartc89:IJLOURnjitHsiFiS@cluster0.yy1jozd.mongodb.net/?retryWrites=true&w=majority';
+          uri = process.env.MONGODB_URI ;
           console.log('Connecting to MongoDB Atlas (Production)...');
         } else {
           // Development: Use localhost
