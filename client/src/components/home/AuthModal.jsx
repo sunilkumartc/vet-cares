@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,10 +8,13 @@ import { X, Heart, Mail, User as UserIcon, Eye, EyeOff } from "lucide-react";
 import { TenantClient } from '@/api/tenant-entities';
 import { User } from '@/api/tenant-entities';
 import { createPageUrl } from '@/utils';
+import { TenantManager } from '@/lib/tenant';
+import ClientSessionManager from '@/lib/clientSession';
 
 export default function AuthModal({ isOpen, onClose }) {
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
+  const [tenant, setTenant] = useState(null);
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -20,10 +23,27 @@ export default function AuthModal({ isOpen, onClose }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  useEffect(() => {
+    if (isOpen) {
+      const currentTenant = TenantManager.getCurrentTenant();
+      setTenant(currentTenant);
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleEmailAuth = async (e) => {
     e.preventDefault();
+    console.log('Form submission - isLogin:', isLogin);
+    console.log('Form data:', formData);
+    console.log('Tenant config:', tenant?.registration_settings);
+    
+    // Ensure tenant is loaded
+    if (!tenant) {
+      setError('Loading tenant configuration... Please try again.');
+      return;
+    }
+    
     setLoading(true);
     setError('');
     
@@ -36,23 +56,25 @@ export default function AuthModal({ isOpen, onClose }) {
           return;
         }
 
+        // Get current tenant first
+        const currentTenant = await TenantManager.getCurrentTenant();
+        if (!currentTenant) {
+          setError('Unable to determine clinic. Please try again.');
+          setLoading(false);
+          return;
+        }
+
+        // Get all clients for current tenant and find the matching one
         const clients = await TenantClient.list();
         const client = clients.find(c => 
           c.email?.toLowerCase() === formData.email.toLowerCase() && 
-          c.password === formData.password
+          c.password === formData.password &&
+          c.tenant_id === currentTenant._id // Ensure client belongs to current tenant
         );
 
         if (client) {
-          // Create a session for the client
-          const sessionData = {
-            id: client.id,
-            full_name: `${client.first_name} ${client.last_name}`,
-            email: client.email,
-            role: 'user',
-            authenticated: true
-          };
-
-          localStorage.setItem('clientSession', JSON.stringify(sessionData));
+          // Create session using ClientSessionManager
+          ClientSessionManager.createSession(client, currentTenant._id);
           onClose();
           
           // Redirect to client dashboard
@@ -62,15 +84,35 @@ export default function AuthModal({ isOpen, onClose }) {
         }
       } else {
         // For signup, create a new client account
-        if (!formData.fullName || !formData.email || !formData.password) {
-          setError('Please fill in all required fields.');
+        const requiredFields = ['email', 'password'];
+        if (tenant?.registration_settings?.require_full_name) {
+          requiredFields.push('fullName');
+        }
+        
+        const missingFields = requiredFields.filter(field => !formData[field]);
+        if (missingFields.length > 0) {
+          console.log('Missing fields:', missingFields);
+          console.log('Form data:', formData);
+          console.log('Tenant config:', tenant?.registration_settings);
+          setError(`Please fill in all required fields: ${missingFields.join(', ')}`);
           setLoading(false);
           return;
         }
 
-        // Check if email already exists
+        // Get current tenant first
+        const currentTenant = await TenantManager.getCurrentTenant();
+        if (!currentTenant) {
+          setError('Unable to determine clinic. Please try again.');
+          setLoading(false);
+          return;
+        }
+
+        // Check if email already exists within current tenant
         const clients = await TenantClient.list();
-        const existingClient = clients.find(c => c.email?.toLowerCase() === formData.email.toLowerCase());
+        const existingClient = clients.find(c => 
+          c.email?.toLowerCase() === formData.email.toLowerCase() &&
+          c.tenant_id === currentTenant._id
+        );
         
         if (existingClient) {
           setError('An account with this email already exists.');
@@ -89,21 +131,14 @@ export default function AuthModal({ isOpen, onClose }) {
           email: formData.email.toLowerCase(),
           password: formData.password,
           phone: '',
-          address: ''
+          address: '',
+          tenant_id: currentTenant._id // Explicitly set tenant_id
         };
 
         const newClient = await TenantClient.create(clientData);
 
-        // Create session for new client
-        const sessionData = {
-          id: newClient.id,
-          full_name: `${newClient.first_name} ${newClient.last_name}`,
-          email: newClient.email,
-          role: 'user',
-          authenticated: true
-        };
-
-        localStorage.setItem('clientSession', JSON.stringify(sessionData));
+        // Create session using ClientSessionManager
+        ClientSessionManager.createSession(newClient, currentTenant._id);
         onClose();
         
         // Redirect to client dashboard
@@ -138,10 +173,16 @@ export default function AuthModal({ isOpen, onClose }) {
             <Heart className="w-8 h-8 text-blue-600" />
           </div>
           <CardTitle className="text-2xl font-bold text-gray-900">
-            {isLogin ? 'Welcome Back!' : 'Join Our TenantPet Family'}
+            {isLogin ? 
+              (tenant?.login_customization?.login_title || 'Welcome Back!') : 
+              (tenant?.login_customization?.signup_title || `Join ${tenant?.clinic_name || tenant?.name || 'Our Clinic'} Family`)
+            }
           </CardTitle>
           <p className="text-gray-600">
-            {isLogin ? 'Sign in to book appointments' : 'Create account to get started'}
+            {isLogin ? 
+              (tenant?.login_customization?.login_subtitle || 'Sign in to book appointments') : 
+              (tenant?.login_customization?.signup_subtitle || 'Create account to get started')
+            }
           </p>
         </CardHeader>
         
@@ -154,7 +195,7 @@ export default function AuthModal({ isOpen, onClose }) {
 
           {/* Email Form */}
           <form onSubmit={handleEmailAuth} className="space-y-4">
-            {!isLogin && (
+            {!isLogin && tenant?.registration_settings?.require_full_name && (
               <div className="space-y-2">
                 <Label htmlFor="fullName">Full Name</Label>
                 <div className="relative">
@@ -166,7 +207,7 @@ export default function AuthModal({ isOpen, onClose }) {
                     onChange={(e) => handleChange('fullName', e.target.value)}
                     placeholder="Enter your full name"
                     className="pl-10"
-                    required={!isLogin}
+                    required={true}
                   />
                 </div>
               </div>
@@ -231,7 +272,22 @@ export default function AuthModal({ isOpen, onClose }) {
           </div>
 
           <div className="text-xs text-gray-500 text-center">
-            By continuing, you agree to our Terms of Service and Privacy Policy
+            {tenant?.registration_settings?.terms_of_service || 'By continuing, you agree to our Terms of Service and Privacy Policy'}
+            {tenant?.registration_settings?.terms_url && (
+              <div className="mt-1">
+                <a href={tenant.registration_settings.terms_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                  Terms of Service
+                </a>
+                {tenant?.registration_settings?.privacy_policy_url && (
+                  <>
+                    {' • '}
+                    <a href={tenant.registration_settings.privacy_policy_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                      Privacy Policy
+                    </a>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

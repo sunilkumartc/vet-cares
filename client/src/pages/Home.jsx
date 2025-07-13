@@ -1,19 +1,22 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Heart, Stethoscope, ShieldCheck, Phone, MapPin, Clock, MessageCircle, X, Send, Menu, User as UserIcon, Star, Award, Users, Calendar, Camera, Utensils, Activity, BookOpen, Smile, Sparkles, HeartHandshake, Siren } from "lucide-react";
+import { Heart, Stethoscope, ShieldCheck, Phone, MapPin, Clock, MessageCircle, X, Send, Menu, User as UserIcon, Star, Award, Users, Calendar, Camera, Utensils, Activity, BookOpen, Smile, Sparkles, HeartHandshake, Siren, Mail } from "lucide-react";
 import { User } from '@/api/tenant-entities';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { TenantManager } from '@/lib/tenant';
 
 import VirtualChat from '../components/home/VirtualChat';
 import AuthModal from '../components/home/AuthModal';
+import OTPAuthModal from '../components/auth/OTPAuthModal';
 import ServicesGrid from '../components/home/ServicesGrid'; // New import for the refactored services section
 
 // The 'services' array has been moved to the ServicesGrid component.
 
-const successStories = [
+// Default success stories - can be overridden by tenant configuration
+const getDefaultSuccessStories = () => [
   {
     id: 1,
     petName: "Buddy",
@@ -27,7 +30,7 @@ const successStories = [
     id: 2,
     petName: "Whiskers",
     ownerName: "Raj Patel",
-    story: "Our cat Whiskers had a complex surgery that saved her life. The care and attention from Dr. Ravi's team was exceptional throughout the recovery.",
+    story: "Our cat Whiskers had a complex surgery that saved her life. The care and attention from our team was exceptional throughout the recovery.",
     image: "https://images.unsplash.com/photo-1574158622682-e40e69881006?q=80&w=800&auto=format&fit=crop",
     treatment: "Emergency Surgery & Recovery",
     rating: 5
@@ -36,14 +39,15 @@ const successStories = [
     id: 3,
     petName: "Rocky",
     ownerName: "Anjali Reddy",
-    story: "Rocky was overweight and lethargic. With Dr. Ravi's nutrition plan and regular check-ups, he's now the energetic dog we remember!",
+    story: "Rocky was overweight and lethargic. With our nutrition plan and regular check-ups, he's now the energetic dog we remember!",
     image: "https://images.unsplash.com/photo-1583337130417-3346a1be7dee?q=80&w=800&auto=format&fit=crop",
     treatment: "Weight Management & Wellness",
     rating: 5
   }
 ];
 
-const teamMembers = [
+// Default team members - can be overridden by tenant configuration
+const getDefaultTeamMembers = () => [
   {
     id: 1,
     name: "Dr. Ravi Kumar",
@@ -82,14 +86,46 @@ const teamMembers = [
 export default function HomePage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showOTPAuthModal, setShowOTPAuthModal] = useState(false);
+  const [tenant, setTenant] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadTenantInfo = async () => {
+      try {
+        const currentTenant = TenantManager.getCurrentTenant();
+        console.log('Current tenant for homepage:', currentTenant);
+        setTenant(currentTenant);
+      } catch (error) {
+        console.error('Error loading tenant info:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadTenantInfo();
+  }, []);
 
   const handleBookAppointment = () => {
-    setShowAuthModal(true);
+    setShowOTPAuthModal(true);
   };
 
   const handleLogin = () => {
-    setShowAuthModal(true);
+    setShowOTPAuthModal(true);
   };
+
+  if (loading) {
+    return (
+      <div className="bg-gray-50 text-gray-800 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <Heart className="w-8 h-8 text-white animate-pulse" />
+          </div>
+          <p className="text-gray-600">Loading clinic information...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-gray-50 text-gray-800">
@@ -103,8 +139,12 @@ export default function HomePage() {
                 <Heart className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">Dr. Ravi Pet Portal</h1>
-                <p className="text-xs text-gray-500">Caring for your furry family</p>
+                <h1 className="text-xl font-bold text-gray-900">
+                  {tenant?.clinic_name || tenant?.name || 'Veterinary Clinic'}
+                </h1>
+                <p className="text-xs text-gray-500">
+                  {tenant?.tagline || 'Caring for your furry family'}
+                </p>
               </div>
             </div>
 
@@ -204,7 +244,7 @@ export default function HomePage() {
         <div className="relative max-w-6xl mx-auto px-6 py-24 md:py-40 text-center">
           <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight leading-tight">Your Pet's Health, Our Priority 🐾</h1>
           <p className="mt-4 max-w-3xl mx-auto text-lg md:text-xl text-gray-200">
-            Welcome to Dr. Ravi Pet Portal, where compassionate care meets modern veterinary medicine. We're dedicated to keeping your furry family members happy and healthy with personalized nutrition, wellness plans, and expert medical care.
+            Welcome to {tenant?.clinic_name || tenant?.name || 'our veterinary clinic'}, where compassionate care meets modern veterinary medicine. We're dedicated to keeping your furry family members happy and healthy with personalized nutrition, wellness plans, and expert medical care.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row justify-center gap-4">
             <Button onClick={handleBookAppointment} size="lg" className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg">
@@ -236,7 +276,7 @@ export default function HomePage() {
             <p className="mt-2 text-gray-600">Real stories from our happy pet families</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {successStories.map((story) => (
+            {(tenant?.success_stories || getDefaultSuccessStories()).map((story) => (
               <Card key={story.id} className="overflow-hidden hover:shadow-2xl transition-all duration-300 border-0 shadow-lg">
                 <div className="h-48 overflow-hidden">
                   <img 
@@ -273,9 +313,11 @@ export default function HomePage() {
                <img src="https://images.unsplash.com/photo-1548199973-03cce0bbc87b?q=80&w=2069&auto=format&fit=crop" alt="Happy pets" className="rounded-2xl shadow-xl w-full h-auto" />
             </div>
             <div className="md:w-1/2 text-center md:text-left">
-              <h2 className="text-3xl md:text-4xl font-bold text-blue-800 mb-4">Meet Dr. Ravi & The Team</h2>
+              <h2 className="text-3xl md:text-4xl font-bold text-blue-800 mb-4">
+                Meet {tenant?.clinic_name || tenant?.name || 'Our Team'}
+              </h2>
               <p className="text-lg text-gray-700 mb-6">
-                Dr. Ravi leads our team of dedicated veterinary professionals who are all passionate pet lovers. We believe in building lasting relationships with our clients and their pets, providing personalized care tailored to each animal's unique needs. Our clinic is a place of healing, comfort, and expertise.
+                {tenant?.description || 'Our team of dedicated veterinary professionals are all passionate pet lovers. We believe in building lasting relationships with our clients and their pets, providing personalized care tailored to each animal\'s unique needs. Our clinic is a place of healing, comfort, and expertise.'}
               </p>
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
@@ -304,7 +346,7 @@ export default function HomePage() {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {teamMembers.map((member) => (
+            {(tenant?.team_members || getDefaultTeamMembers()).map((member) => (
               <Card key={member.id} className="bg-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-0 overflow-hidden">
                 <div className="relative">
                   <img 
@@ -452,24 +494,36 @@ export default function HomePage() {
                 <div className="space-y-4 text-lg">
                   <div className="flex items-start gap-4">
                     <MapPin className="w-6 h-6 mt-1 flex-shrink-0" />
-                    <span>No. 32, 4th temple Street road, 15th Cross Rd, Malleshwaram, Bengaluru, Karnataka 560003</span>
+                    <span>{tenant?.address || 'Address not configured'}</span>
                   </div>
                   <div className="flex items-center gap-4">
                     <Phone className="w-6 h-6" />
                     <div>
-                      <a href="tel:08296143115" className="hover:underline block">Call: 082961 43115</a>
-                      <a 
-                        href="https://wa.me/918296143115" 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="hover:underline text-green-200 flex items-center gap-2 mt-1"
-                      >
-                        <MessageCircle className="w-5 h-5" />
-                        WhatsApp: +91 82961 43115
-                      </a>
+                      {tenant?.phone ? (
+                        <>
+                          <a href={`tel:${tenant.phone}`} className="hover:underline block">Call: {tenant.phone}</a>
+                          <a 
+                            href={`https://wa.me/${tenant.phone.replace(/\D/g, '')}`}
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="hover:underline text-green-200 flex items-center gap-2 mt-1"
+                          >
+                            <MessageCircle className="w-5 h-5" />
+                            WhatsApp: {tenant.phone}
+                          </a>
+                        </>
+                      ) : (
+                        <span>Phone not configured</span>
+                      )}
                     </div>
                   </div>
-                   <div className="flex items-center gap-4">
+                  {tenant?.email && (
+                    <div className="flex items-center gap-4">
+                      <Mail className="w-6 h-6" />
+                      <a href={`mailto:${tenant.email}`} className="hover:underline">{tenant.email}</a>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-4">
                     <Clock className="w-6 h-6" />
                     <span>Open daily: 9:00 AM - 9:00 PM</span>
                   </div>
@@ -482,15 +536,21 @@ export default function HomePage() {
                     Quick WhatsApp Contact
                   </h4>
                   <p className="text-sm text-green-100 mb-3">Get instant responses for emergencies or quick questions</p>
-                  <a 
-                    href="https://wa.me/918296143115?text=Hello%20Dr.%20Ravi%20Pet%20Portal,%20I%20need%20help%20with%20my%20pet" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                  >
-                    <Button className="bg-white text-green-600 hover:bg-green-50 w-full">
-                      Chat on WhatsApp
+                  {tenant?.phone ? (
+                    <a 
+                      href={`https://wa.me/${tenant.phone.replace(/\D/g, '')}?text=Hello%20${encodeURIComponent(tenant?.clinic_name || tenant?.name || 'Veterinary Clinic')},%20I%20need%20help%20with%20my%20pet`}
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                    >
+                      <Button className="bg-white text-green-600 hover:bg-green-50 w-full">
+                        Chat on WhatsApp
+                      </Button>
+                    </a>
+                  ) : (
+                    <Button className="bg-white text-gray-400 w-full" disabled>
+                      Phone not configured
                     </Button>
-                  </a>
+                  )}
                 </div>
               </div>
               <div className="h-64 lg:h-auto">
@@ -512,8 +572,13 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="bg-gray-800 text-white py-8">
         <div className="max-w-6xl mx-auto px-6 text-center text-gray-400">
-           <p>© {new Date().getFullYear()} Dr. Ravi Pet Portal. All Rights Reserved.</p>
-           <p className="text-sm mt-2">Caring for the pets of Malleshwaram, Bengaluru with love and expertise.</p>
+           <p>© {new Date().getFullYear()} {tenant?.clinic_name || tenant?.name || 'Veterinary Clinic'}. All Rights Reserved.</p>
+           <p className="text-sm mt-2">
+             {tenant?.description ? 
+               tenant.description.substring(0, 100) + (tenant.description.length > 100 ? '...' : '') :
+               'Caring for pets with love and expertise.'
+             }
+           </p>
         </div>
       </footer>
 
@@ -525,6 +590,17 @@ export default function HomePage() {
         isOpen={showAuthModal} 
         onClose={() => setShowAuthModal(false)} 
       />
+
+      {/* OTP Auth Modal */}
+      <OTPAuthModal 
+        isOpen={showOTPAuthModal} 
+        onClose={() => setShowOTPAuthModal(false)} 
+        onSuccess={(session) => {
+          console.log('OTP authentication successful:', session);
+          setShowOTPAuthModal(false);
+        }}
+      />
     </div>
   );
 }
+

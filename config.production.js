@@ -5,8 +5,8 @@ export const productionConfig = {
   PORT: process.env.PORT || 3001,
   LOG_LEVEL: process.env.LOG_LEVEL || 'info',
   
-  // Database
-  MONGO_URI: process.env.MONGO_URI || 'mongodb://localhost:27017/vet-cares',
+  // Database - Production MongoDB Atlas
+  MONGO_URI: process.env.MONGO_URI || 'mongodb+srv://sunilkumartc89:IJLOURnjitHsiFiS@cluster0.yy1jozd.mongodb.net/',
   ES_URL: process.env.ES_URL || 'http://localhost:9200',
   ES_INDEX: process.env.ES_INDEX || 'soap_notes',
   

@@ -15,8 +15,8 @@ export const sendInvoice = async (invoiceId) => {
     }
 
     const [client, pet] = await Promise.all([
-      invoice.client_id ? TenantClient.get(invoice.client_id) : null,
-      invoice.pet_id ? TenantPet.get(invoice.pet_id) : null
+      invoice.client_id && invoice.client_id !== 'undefined' ? TenantClient.get(invoice.client_id) : null,
+      invoice.pet_id && invoice.pet_id !== 'undefined' ? TenantPet.get(invoice.pet_id) : null
     ]);
 
     // 2. Get tenant information for PDF header/footer

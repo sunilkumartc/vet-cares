@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
-import { FileText, Stethoscope, Pill, HeartPulse } from "lucide-react";
+import { FileText, Stethoscope, Pill, HeartPulse, FileIcon, Image, Eye } from "lucide-react";
+import DocumentViewer from '@/components/medical-records/DocumentViewer';
 
 const VitalsDisplay = ({ vitals }) => {
     if(!vitals) return null;
@@ -30,7 +32,45 @@ const VitalsDisplay = ({ vitals }) => {
     )
 }
 
-const RecordItem = ({ record }) => {
+const DocumentAttachments = ({ attachments, type, icon: Icon, onViewDocument }) => {
+    if (!attachments || attachments.length === 0) return null;
+
+    return (
+        <div className="mt-4">
+            <h4 className="font-medium text-gray-800 mb-2 flex items-center gap-2">
+                <Icon className="w-4 h-4 text-blue-500" />
+                {type} ({attachments.length})
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {attachments.map((attachment, index) => (
+                    <div key={attachment.fileId || index} className="flex items-center justify-between bg-gray-50 rounded-lg p-3 border border-gray-200">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <FileIcon className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                            <span className="text-sm text-gray-700 truncate">
+                                {attachment.fileName || attachment.metadata?.originalName || `${type} ${index + 1}`}
+                            </span>
+                        </div>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onViewDocument(
+                                attachment.url,
+                                attachment.fileName || attachment.metadata?.originalName || `${type} ${index + 1}`,
+                                attachment.contentType
+                            )}
+                            className="gap-1 hover:bg-blue-50 text-blue-600 flex-shrink-0"
+                        >
+                            <Eye className="w-3 h-3" />
+                            View
+                        </Button>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+const RecordItem = ({ record, onViewDocument }) => {
   return (
     <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-lg overflow-hidden">
       <CardHeader className="bg-gray-50 border-b">
@@ -51,12 +91,40 @@ const RecordItem = ({ record }) => {
               </ul>
             </div>
           )}
+
+        {/* Document Attachments */}
+        <DocumentAttachments 
+            attachments={record.lab_reports} 
+            type="Lab Reports" 
+            icon={FileText}
+            onViewDocument={onViewDocument}
+        />
+        <DocumentAttachments 
+            attachments={record.radiology_reports} 
+            type="Radiology Reports" 
+            icon={Image}
+            onViewDocument={onViewDocument}
+        />
+        <DocumentAttachments 
+            attachments={record.other_attachments} 
+            type="Other Documents" 
+            icon={FileIcon}
+            onViewDocument={onViewDocument}
+        />
       </CardContent>
     </Card>
   );
 };
 
 export default function MedicalHistoryTab({ records }) {
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [currentFile, setCurrentFile] = useState({ url: '', name: '', type: '' });
+
+  const handleViewDocument = (fileUrl, fileName, fileType) => {
+    setCurrentFile({ url: fileUrl, name: fileName, type: fileType });
+    setViewerOpen(true);
+  };
+
   if (!records || records.length === 0) {
     return (
       <Card className="text-center py-12 bg-white/60 backdrop-blur-sm border-pink-100">
@@ -72,10 +140,24 @@ export default function MedicalHistoryTab({ records }) {
   }
 
   return (
-    <div className="space-y-4">
-      {records.map(record => (
-        <RecordItem key={record.id} record={record} />
-      ))}
-    </div>
+    <>
+      <div className="space-y-4">
+        {records.map(record => (
+          <RecordItem 
+            key={record.id} 
+            record={record} 
+            onViewDocument={handleViewDocument}
+          />
+        ))}
+      </div>
+
+      <DocumentViewer
+        isOpen={viewerOpen}
+        onClose={() => setViewerOpen(false)}
+        fileUrl={currentFile.url}
+        fileName={currentFile.name}
+        fileType={currentFile.type}
+      />
+    </>
   );
 }

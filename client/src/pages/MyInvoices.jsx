@@ -2,12 +2,14 @@ import React, { useState, useEffect } from "react";
 import { CreditCard, PawPrint, Calendar, FileText } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { User, TenantClient, TenantPet, TenantInvoice } from "@/api/tenant-entities";
+import { TenantClient, TenantPet, TenantInvoice } from "@/api/tenant-entities";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import ClientAuthGuard from "@/components/ClientAuthGuard";
+import ClientSessionManager from "@/lib/clientSession";
 
 const statusColors = {
   paid: "bg-green-100 text-green-800",
@@ -28,26 +30,22 @@ export default function MyInvoices() {
 
   const loadInvoiceData = async () => {
     try {
-      // Check for client session first
-      const clientSessionData = localStorage.getItem('clientSession');
-      let myClient = null;
-
-      if (clientSessionData) {
-        myClient = JSON.parse(clientSessionData);
-      } else {
-        // Fallback to user authentication
-        const user = await User.me();
-        const clients = await TenantClient.list();
-        myClient = clients.find(c => c.email === user.email);
+      // Get authenticated client session
+      const session = ClientSessionManager.getCurrentSession();
+      if (!session || !session.authenticated) {
+        throw new Error('Client not authenticated');
       }
 
-      if (myClient) {
-        const myPets = await TenantPet.filter({ client_id: myClient.id });
-        setPets(myPets);
-        
-        const allInvoices = await TenantInvoice.filter({ client_id: myClient.id });
-        setInvoices(allInvoices.sort((a,b) => new Date(b.invoice_date) - new Date(a.invoice_date)));
-      }
+      const clientId = ClientSessionManager.getClientId();
+      
+      // Load client-specific data
+      const [myPets, allInvoices] = await Promise.all([
+        TenantPet.filter({ client_id: clientId }),
+        TenantInvoice.filter({ client_id: clientId })
+      ]);
+      
+      setPets(myPets);
+      setInvoices(allInvoices.sort((a,b) => new Date(b.invoice_date) - new Date(a.invoice_date)));
     } catch (error) {
       console.error("Failed to load invoice data:", error);
     } finally {
@@ -72,15 +70,16 @@ export default function MyInvoices() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-orange-50 p-4 md:p-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent flex items-center gap-2">
-            <CreditCard className="w-8 h-8 text-yellow-500" />
-            Billing & Invoices
-          </h1>
-          <p className="text-gray-600 mt-1">Your payment history with {window?.portalName || 'the portal'}.</p>
-        </div>
+    <ClientAuthGuard>
+      <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-orange-50 p-4 md:p-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent flex items-center gap-2">
+              <CreditCard className="w-8 h-8 text-yellow-500" />
+              Billing & Invoices
+            </h1>
+            <p className="text-gray-600 mt-1">Your payment history with {window?.portalName || 'the portal'}.</p>
+          </div>
 
         {invoices.length === 0 ? (
           <Card className="text-center py-16 bg-white/80 backdrop-blur-sm">
@@ -125,5 +124,6 @@ export default function MyInvoices() {
         )}
       </div>
     </div>
+    </ClientAuthGuard>
   );
 }

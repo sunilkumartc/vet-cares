@@ -1,6 +1,24 @@
 // API TenantClient for communicating with Express backend
 const API_BASE_URL = '/api';
 
+// Utility function to clean parameters
+function cleanParams(params) {
+  console.log(`cleanParams - Input:`, params);
+  const cleanParams = {};
+  Object.keys(params).forEach(key => {
+    const value = params[key];
+    console.log(`cleanParams - Processing key: ${key}, value: ${value}, type: ${typeof value}`);
+    if (value !== undefined && value !== null && value !== 'undefined' && value !== 'null' && value !== '') {
+      cleanParams[key] = value;
+      console.log(`cleanParams - Added key: ${key}, value: ${value}`);
+    } else {
+      console.log(`cleanParams - Skipped key: ${key}, value: ${value}`);
+    }
+  });
+  console.log(`cleanParams - Output:`, cleanParams);
+  return cleanParams;
+}
+
 class HttpClient {
   constructor() {
     this.baseURL = API_BASE_URL;
@@ -32,8 +50,16 @@ class HttpClient {
   }
 
   async get(endpoint, params = {}) {
-    const queryString = new URLSearchParams(params).toString();
+    console.log(`HttpClient - get() called with endpoint:`, endpoint);
+    console.log(`HttpClient - Original params:`, params);
+    
+    const cleanedParams = cleanParams(params);
+    console.log(`HttpClient - Cleaned params:`, cleanedParams);
+    
+    const queryString = new URLSearchParams(cleanedParams).toString();
     const url = queryString ? `${endpoint}?${queryString}` : endpoint;
+    console.log(`HttpClient - Final URL:`, url);
+    
     return this.request(url, { method: 'GET' });
   }
 
@@ -52,7 +78,8 @@ class HttpClient {
   }
 
   async delete(endpoint, params = {}) {
-    const queryString = new URLSearchParams(params).toString();
+    const cleanedParams = cleanParams(params);
+    const queryString = new URLSearchParams(cleanedParams).toString();
     const url = queryString ? `${endpoint}?${queryString}` : endpoint;
     return this.request(url, { method: 'DELETE' });
   }
@@ -66,7 +93,15 @@ class BaseApiEntity {
   }
 
   async list(sort = null, limit = null, filters = {}) {
-    const params = { ...filters };
+    console.log(`API Client - list() called for ${this.entityName}`);
+    console.log(`API Client - Original filters:`, filters);
+    console.log(`API Client - Sort:`, sort);
+    console.log(`API Client - Limit:`, limit);
+    
+    const cleanFilters = cleanParams(filters);
+    console.log(`API Client - Cleaned filters:`, cleanFilters);
+    
+    const params = { ...cleanFilters };
     if (sort) params.sort = sort;
     if (limit) params.limit = limit;
     
@@ -76,7 +111,7 @@ class BaseApiEntity {
     if (tenant) {
       params.tenant_id = tenant._id || tenant.id;
     }
-    console.log(`API TenantClient - Request params:`, params);
+    console.log(`API TenantClient - Final request params:`, params);
     
     const result = await this.api.get(`/${this.entityName}`, params);
     console.log(`API TenantClient - ${this.entityName} result:`, result);
@@ -84,7 +119,14 @@ class BaseApiEntity {
   }
 
   async filter(filters = {}, sort = null) {
-    const params = { ...filters };
+    console.log(`API Client - filter() called for ${this.entityName}`);
+    console.log(`API Client - Original filters:`, filters);
+    console.log(`API Client - Sort:`, sort);
+    
+    const cleanFilters = cleanParams(filters);
+    console.log(`API Client - Cleaned filters:`, cleanFilters);
+    
+    const params = { ...cleanFilters };
     if (sort) params.sort = sort;
     
     // Get current tenant
@@ -105,8 +147,17 @@ class BaseApiEntity {
     console.log(`API Client - Getting ${this.entityName} with ID:`, id);
     console.log(`API Client - Current tenant:`, tenant);
     
-    const params = tenant ? { tenant_id: tenant._id || tenant.id } : {};
+    // Only add tenant_id if it exists
+    const params = {};
+    if (tenant && (tenant._id || tenant.id)) {
+      params.tenant_id = tenant._id || tenant.id;
+    }
     console.log(`API Client - Request params:`, params);
+    
+    // Validate id parameter
+    if (!id || id === 'undefined' || id === 'null') {
+      throw new Error(`Invalid ID provided for ${this.entityName}: ${id}`);
+    }
     
     const url = `/${this.entityName}/${id}`;
     console.log(`API Client - Request URL:`, url);
@@ -143,8 +194,14 @@ class BaseApiEntity {
   }
 
   async count(filters = {}) {
+    console.log(`API Client - count() called for ${this.entityName}`);
+    console.log(`API Client - Original filters:`, filters);
+    
     const tenant = await this.getCurrentTenant();
-    const params = { ...filters };
+    const cleanFilters = cleanParams(filters);
+    console.log(`API Client - Cleaned filters:`, cleanFilters);
+    
+    const params = { ...cleanFilters };
     if (tenant) {
       params.tenant_id = tenant._id || tenant.id;
     }
@@ -153,8 +210,14 @@ class BaseApiEntity {
   }
 
   async findOne(filters = {}) {
+    console.log(`API Client - findOne() called for ${this.entityName}`);
+    console.log(`API Client - Original filters:`, filters);
+    
     const tenant = await this.getCurrentTenant();
-    const params = { ...filters };
+    const cleanFilters = cleanParams(filters);
+    console.log(`API Client - Cleaned filters:`, cleanFilters);
+    
+    const params = { ...cleanFilters };
     if (tenant) {
       params.tenant_id = tenant._id || tenant.id;
     }

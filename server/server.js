@@ -24,6 +24,7 @@ import soapSuggestionsRoutes from './routes/soap-suggestions.js';
 import vetSoapSuggestRoutes from './routes/vet-soap-suggest.js';
 import medicalFilesRoutes from './routes/medical-files.js';
 import clinicProfileRoutes from './routes/clinic-profile.js';
+import otpRoutes from './routes/otp.js';
 import { dbUtils } from './lib/mongodb.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -78,6 +79,7 @@ app.use('/api/soap', soapSuggestionsRoutes);
 app.use('/api', vetSoapSuggestRoutes);
 app.use('/api', medicalFilesRoutes);
 app.use('/api/clinic', clinicProfileRoutes);
+app.use('/api/otp', otpRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
@@ -154,13 +156,21 @@ function buildTenantQuery(tenantId, filters = {}) {
   }
   
   // Handle ObjectId fields
-  if (filters._id) {
-    query._id = new ObjectId(filters._id);
+  if (filters._id && filters._id !== 'undefined' && filters._id !== 'null') {
+    try {
+      query._id = new ObjectId(filters._id);
+    } catch (error) {
+      console.warn('Invalid _id format:', filters._id);
+    }
     delete filters._id;
   }
   
-  if (filters.id) {
-    query._id = new ObjectId(filters.id);
+  if (filters.id && filters.id !== 'undefined' && filters.id !== 'null') {
+    try {
+      query._id = new ObjectId(filters.id);
+    } catch (error) {
+      console.warn('Invalid id format:', filters.id);
+    }
     delete filters.id;
   }
   
@@ -274,8 +284,16 @@ app.get('/api/:entity', async (req, res) => {
   try {
     const { entity } = req.params;
     const { tenant_id, sort, ...filters } = req.query;
+    
+    console.log(`Generic entity API - Entity: ${entity}`);
+    console.log(`Generic entity API - Query params:`, req.query);
+    console.log(`Generic entity API - Filters:`, filters);
+    console.log(`Generic entity API - Tenant ID:`, tenant_id);
+    
     const collection = dbUtils.getCollection(entity);
     const query = buildTenantQuery(tenant_id, filters);
+    
+    console.log(`Generic entity API - Final query:`, query);
     
     let cursor = collection.find(query);
     
@@ -291,7 +309,7 @@ app.get('/api/:entity', async (req, res) => {
     }
     
     const data = await cursor.toArray();
-    res.json(dbUtils.formatResponse(data));
+    res.json(formatResponse(data));
   } catch (error) {
     console.error(`Error getting ${req.params.entity}:`, error);
     res.status(500).json({ error: `Failed to get ${req.params.entity}` });
@@ -318,25 +336,35 @@ app.get('/api/:entity/:id', async (req, res) => {
     if (tenant_id && tenant_id !== 'null' && tenant_id !== 'undefined') query.tenant_id = tenant_id;
     const result = await dbUtils.getCollection(entity).findOne(query);
     if (!result) return res.status(404).json({ error: `${entity} not found` });
-    res.json(dbUtils.formatResponse(result));
+    res.json(formatResponse(result));
   } catch (error) {
     console.error(`Error getting ${req.params.entity}:`, error);
     res.status(500).json({ error: `Failed to get ${req.params.entity}` });
   }
 });
 
-// Create a separate multer instance for S3 uploads that allows both PDF and text files
+// Create a separate multer instance for S3 uploads that allows PDF, text, and image files
 const s3Upload = multer({
   storage: multer.memoryStorage(),
   limits: {
     fileSize: 10 * 1024 * 1024 // 10MB limit
   },
   fileFilter: (req, file, cb) => {
-    // Allow PDF and text files for testing
-    if (file.mimetype === 'application/pdf' || file.mimetype === 'text/plain') {
+    // Allow PDF, text, and image files
+    const allowedMimeTypes = [
+      'application/pdf',
+      'text/plain',
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/gif',
+      'image/webp'
+    ];
+    
+    if (allowedMimeTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Only PDF and text files are allowed'), false);
+      cb(new Error(`Only PDF, text, and image files are allowed. Received: ${file.mimetype}`), false);
     }
   }
 });
@@ -383,11 +411,30 @@ app.post('/api/upload-to-s3', s3Upload.single('file'), async (req, res) => {
       region: AWS_S3_REGION
     });
 
+    // Get tenant information for multi-tenant file organization
+    const tenantId = req.body.tenant_id || req.query.tenant_id;
+    const fileType = req.body.fileType || 'general'; // 'invoice', 'pet-photo', 'clinic-logo', etc.
+    
     // Use custom fileName from request body, fallback to original name
     const customFileName = req.body.fileName || req.file.originalname;
-    // Only add invoice/ prefix if it's not already a clinic-logo or other specific path
-    const s3Key = customFileName.startsWith('invoice/') || customFileName.startsWith('clinic-logos/') ? 
-      customFileName : `invoice/${customFileName}`;
+    
+    // Generate tenant-specific S3 key based on file type
+    let s3Key;
+    if (fileType === 'pet-photo') {
+      // Pet photos: pets/{tenant_id}/{timestamp}_{filename}
+      const timestamp = Date.now();
+      const sanitizedFileName = customFileName.replace(/[^a-zA-Z0-9.-]/g, '_');
+      s3Key = `pets/${tenantId}/${timestamp}_${sanitizedFileName}`;
+    } else if (fileType === 'clinic-logo') {
+      // Clinic logos: clinic-logos/{tenant_id}/{filename}
+      s3Key = `clinic-logos/${tenantId}/${customFileName}`;
+    } else if (customFileName.startsWith('invoice/') || customFileName.startsWith('clinic-logos/')) {
+      // Keep existing paths for backward compatibility
+      s3Key = customFileName;
+    } else {
+      // Default: invoice/{tenant_id}/{filename}
+      s3Key = `invoice/${tenantId}/${customFileName}`;
+    }
     
     const params = {
       Bucket: AWS_S3_BUCKET,
@@ -493,6 +540,71 @@ app.get('/api/s3-status', async (req, res) => {
       success: false,
       error: 'Failed to check S3 status',
       details: error.message
+    });
+  }
+});
+
+// Delete file from S3 endpoint
+app.delete('/api/delete-from-s3', async (req, res) => {
+  try {
+    const { fileName, tenant_id } = req.body;
+    
+    if (!fileName) {
+      return res.status(400).json({ success: false, error: 'File name is required' });
+    }
+    
+    // AWS S3 Configuration
+    const AWS_S3_ACCESS_KEY_ID = process.env.AWS_S3_ACCESS_KEY_ID;
+    const AWS_S3_SECRET_ACCESS_KEY = process.env.AWS_S3_SECRET_ACCESS_KEY;
+    const AWS_S3_REGION = process.env.AWS_S3_REGION || 'eu-north-1';
+    const AWS_S3_BUCKET = process.env.AWS_S3_BUCKET || 'vetinvoice';
+
+    // Check if S3 is configured
+    if (!AWS_S3_ACCESS_KEY_ID || !AWS_S3_SECRET_ACCESS_KEY) {
+      return res.status(500).json({ 
+        success: false, 
+        error: 'S3 not configured'
+      });
+    }
+
+    const s3 = new AWS.S3({
+      accessKeyId: AWS_S3_ACCESS_KEY_ID,
+      secretAccessKey: AWS_S3_SECRET_ACCESS_KEY,
+      region: AWS_S3_REGION
+    });
+
+    console.log('Deleting from S3:', { fileName, bucket: AWS_S3_BUCKET });
+
+    const params = {
+      Bucket: AWS_S3_BUCKET,
+      Key: fileName
+    };
+
+    await s3.deleteObject(params).promise();
+    
+    console.log('S3 delete successful:', fileName);
+    
+    res.json({ 
+      success: true, 
+      fileName: fileName,
+      message: 'File deleted successfully'
+    });
+
+  } catch (error) {
+    console.error('Error deleting from S3:', error);
+    
+    let errorMessage = 'Failed to delete file from S3';
+    if (error.code === 'NoSuchKey') {
+      errorMessage = 'File not found in S3';
+    } else if (error.code === 'AccessDenied') {
+      errorMessage = 'Access denied to S3 bucket';
+    }
+    
+    res.status(500).json({ 
+      success: false, 
+      error: errorMessage,
+      details: error.message,
+      code: error.code
     });
   }
 });

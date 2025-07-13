@@ -6,9 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Save, X, Heart } from "lucide-react";
+import { Calendar, Save, X, Heart, Phone } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { TenantAppointment, TenantPet } from "@/api/tenant-entities";
+import ClientSessionManager from "@/lib/clientSession";
+import OTPAuthModal from "@/components/auth/OTPAuthModal";
 
 const serviceTypes = [
   { value: "checkup", label: "General Checkup" },
@@ -37,6 +39,8 @@ export default function AppointmentBookingForm({ pets, selectedPet, onSuccess, o
   });
   const [newPetName, setNewPetName] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [showOTPAuth, setShowOTPAuth] = useState(false);
+  const [session, setSession] = useState(null);
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -47,39 +51,42 @@ export default function AppointmentBookingForm({ pets, selectedPet, onSuccess, o
     setSubmitting(true);
     
     try {
-      const clientSessionData = localStorage.getItem('clientSession');
-      const myClient = clientSessionData ? JSON.parse(clientSessionData) : null;
+      // Get client ID from session manager
+      const clientId = ClientSessionManager.getClientId();
       
-      if (myClient && myClient.id) {
-        let petIdToSubmit = formData.pet_id;
-
-        // If no pets exist and a new pet name is provided, create it first
-        if (pets.length === 0 && newPetName.trim()) {
-            const newPet = await TenantPet.create({
-                name: newPetName.trim(),
-                species: 'other', // A sensible default
-                client_id: myClient.id,
-            });
-            petIdToSubmit = newPet.id;
-        }
-
-        if (!petIdToSubmit) {
-            alert('Please select or enter a name for your pet.');
-            setSubmitting(false);
-            return;
-        }
-
-        await TenantAppointment.create({
-          ...formData,
-          pet_id: petIdToSubmit,
-          client_id: myClient.id,
-          status: "scheduled"
-        });
-        
-        onSuccess();
-      } else {
-        alert("Session expired. Please log in again.");
+      if (!clientId) {
+        // Show OTP authentication if not logged in
+        setShowOTPAuth(true);
+        setSubmitting(false);
+        return;
       }
+
+      let petIdToSubmit = formData.pet_id;
+
+      // If no pets exist and a new pet name is provided, create it first
+      if (pets.length === 0 && newPetName.trim()) {
+          const newPet = await TenantPet.create({
+              name: newPetName.trim(),
+              species: 'other', // A sensible default
+              client_id: clientId,
+          });
+          petIdToSubmit = newPet.id;
+      }
+
+      if (!petIdToSubmit) {
+          alert('Please select or enter a name for your pet.');
+          setSubmitting(false);
+          return;
+      }
+
+      await TenantAppointment.create({
+        ...formData,
+        pet_id: petIdToSubmit,
+        client_id: clientId,
+        status: "scheduled"
+      });
+      
+      onSuccess();
     } catch (error) {
       console.error('Error booking appointment:', error);
       alert('An error occurred while booking. Please try again.');
@@ -104,11 +111,14 @@ export default function AppointmentBookingForm({ pets, selectedPet, onSuccess, o
                     <SelectValue placeholder="Choose your pet" />
                   </SelectTrigger>
                   <SelectContent>
-                    {pets.map(pet => (
-                      <SelectItem key={pet.id} value={pet.id}>
-                        {pet.name} ({pet.species})
-                      </SelectItem>
-                    ))}
+                    {pets.map(pet => {
+                      const petId = pet.id || pet._id;
+                      return (
+                        <SelectItem key={petId} value={petId}>
+                          {pet.name} ({pet.species})
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               ) : (
@@ -208,11 +218,27 @@ export default function AppointmentBookingForm({ pets, selectedPet, onSuccess, o
             </Button>
             <Button type="submit" disabled={submitting} className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700">
               <Save className="w-4 h-4 mr-2" />
-              {submitting ? 'Booking...' : 'Book TenantAppointment'}
+              {submitting ? 'Booking...' : 'Book Appointment'}
             </Button>
           </div>
         </form>
       </CardContent>
+
+      {/* OTP Authentication Modal */}
+      <OTPAuthModal 
+        isOpen={showOTPAuth} 
+        onClose={() => setShowOTPAuth(false)} 
+        onSuccess={(session) => {
+          console.log('OTP authentication successful:', session);
+          setSession(session);
+          setShowOTPAuth(false);
+          // Retry the form submission
+          setTimeout(() => {
+            const form = document.querySelector('form');
+            if (form) form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+          }, 100);
+        }}
+      />
     </Card>
   );
 }

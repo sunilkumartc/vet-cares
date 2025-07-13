@@ -20,6 +20,7 @@ import { hasPageAccess, getCurrentUser, filterByTenant } from "@/utils/permissio
 import { format } from "date-fns";
 import ClientForm from "../components/clients/ClientForm";
 import { useTheme } from "@/contexts/ThemeContext";
+import ClientSessionManager from "@/lib/clientSession";
 
 const adminNavigation = [
   { title: "Dashboard", url: createPageUrl("Dashboard"), icon: Heart },
@@ -145,8 +146,11 @@ export default function Layout({ children, currentPageName }) {
 
   const handleLogout = async () => {
     setLoggingOut(true);
-    if (staffSession) localStorage.removeItem('staffSession');
-    else if (user) localStorage.removeItem('clientSession');
+    if (staffSession) {
+      localStorage.removeItem('staffSession');
+    } else if (user) {
+      ClientSessionManager.clearSession();
+    }
     window.location.href = createPageUrl('Home');
   };
 
@@ -428,7 +432,7 @@ export default function Layout({ children, currentPageName }) {
             </SidebarContent>
             <SidebarFooter>
               <div className="px-3 py-4 space-y-2 text-center">
-                <p className="text-sm font-semibold">{user.full_name}</p>
+                <p className="text-sm font-semibold">{ClientSessionManager.getDisplayName()}</p>
                 <Button variant="outline" size="sm" onClick={handleLogout} className="w-full"><LogOut className="w-4 h-4 mr-2" />Sign Out</Button>
               </div>
             </SidebarFooter>

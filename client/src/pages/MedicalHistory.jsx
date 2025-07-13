@@ -2,9 +2,11 @@ import React, { useState, useEffect } from "react";
 import { FileText, PawPrint, Calendar, Stethoscope, Pill } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { User, TenantClient, TenantPet, TenantMedicalRecord } from "@/api/tenant-entities";
+import { TenantClient, TenantPet, TenantMedicalRecord } from "@/api/tenant-entities";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
+import ClientAuthGuard from "@/components/ClientAuthGuard";
+import ClientSessionManager from "@/lib/clientSession";
 
 export default function MedicalHistory() {
   const [medicalRecords, setMedicalRecords] = useState([]);
@@ -17,22 +19,25 @@ export default function MedicalHistory() {
 
   const loadMedicalData = async () => {
     try {
-      const user = await User.me();
-      const clients = await TenantClient.list();
-      const myClient = clients.find(c => c.email === user.email);
+      // Get authenticated client session
+      const session = ClientSessionManager.getCurrentSession();
+      if (!session || !session.authenticated) {
+        throw new Error('Client not authenticated');
+      }
 
-      if (myClient) {
-        const myPets = await TenantPet.filter({ client_id: myClient.id });
-        setPets(myPets);
+      const clientId = ClientSessionManager.getClientId();
+      
+      // Load client-specific data
+      const myPets = await TenantPet.filter({ client_id: clientId });
+      setPets(myPets);
 
-        if (myPets.length > 0) {
-          const petIds = myPets.map(p => p.id);
-          const records = await TenantMedicalRecord.list();
-          const myRecords = records
-            .filter(r => petIds.includes(r.pet_id))
-            .sort((a, b) => new Date(b.visit_date) - new Date(a.visit_date));
-          setMedicalRecords(myRecords);
-        }
+      if (myPets.length > 0) {
+        const petIds = myPets.map(p => p.id);
+        const records = await TenantMedicalRecord.list();
+        const myRecords = records
+          .filter(r => petIds.includes(r.pet_id))
+          .sort((a, b) => new Date(b.visit_date) - new Date(a.visit_date));
+        setMedicalRecords(myRecords);
       }
     } catch (error) {
       console.error("Failed to load medical history:", error);
@@ -58,15 +63,16 @@ export default function MedicalHistory() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 p-4 md:p-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent flex items-center gap-2">
-            <FileText className="w-8 h-8 text-blue-500" />
-            Medical History
-          </h1>
-          <p className="text-gray-600 mt-1">A complete record of all visits and treatments for your pets.</p>
-        </div>
+    <ClientAuthGuard>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 p-4 md:p-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent flex items-center gap-2">
+              <FileText className="w-8 h-8 text-blue-500" />
+              Medical History
+            </h1>
+            <p className="text-gray-600 mt-1">A complete record of all visits and treatments for your pets.</p>
+          </div>
 
         {medicalRecords.length === 0 ? (
           <Card className="text-center py-16 bg-white/80 backdrop-blur-sm">
@@ -127,5 +133,6 @@ export default function MedicalHistory() {
         )}
       </div>
     </div>
+    </ClientAuthGuard>
   );
 }

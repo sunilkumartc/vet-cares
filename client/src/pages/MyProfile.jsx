@@ -4,6 +4,8 @@ import ClientProfileForm from "../components/customer/ClientProfileForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { User } from "lucide-react";
+import ClientAuthGuard from "@/components/ClientAuthGuard";
+import ClientSessionManager from "@/lib/clientSession";
 
 export default function MyProfile() {
   const [client, setClient] = useState(null);
@@ -12,14 +14,15 @@ export default function MyProfile() {
   useEffect(() => {
     const loadClientData = async () => {
       try {
-        const clientSessionData = localStorage.getItem('clientSession');
-        if (clientSessionData) {
-          const session = JSON.parse(clientSessionData);
-          const clients = await TenantClient.filter({ id: session.id });
-          if(clients.length > 0) {
-              setClient(clients[0]);
-          }
+        // Get authenticated client session
+        const session = ClientSessionManager.getCurrentSession();
+        if (!session || !session.authenticated) {
+          throw new Error('Client not authenticated');
         }
+
+        const clientId = ClientSessionManager.getClientId();
+        const clientRecord = await TenantClient.get(clientId);
+        setClient(clientRecord);
       } catch (error) {
         console.error("Error loading client profile:", error);
       } finally {
@@ -32,13 +35,17 @@ export default function MyProfile() {
   const handleProfileUpdate = async (updatedData) => {
     if (!client) return;
     try {
-      const updatedClient = await TenantClient.update(client.id, updatedData);
+      const clientId = ClientSessionManager.getClientId();
+      const updatedClient = await TenantClient.update(clientId, updatedData);
       
-      const newSessionData = {
-        ...JSON.parse(localStorage.getItem('clientSession')),
+      // Update session with new data
+      ClientSessionManager.updateSession({
         full_name: `${updatedClient.first_name} ${updatedClient.last_name}`,
-      };
-      localStorage.setItem('clientSession', JSON.stringify(newSessionData));
+        first_name: updatedClient.first_name,
+        last_name: updatedClient.last_name,
+        phone: updatedClient.phone,
+        address: updatedClient.address
+      });
       
       setClient(updatedClient);
       alert("Profile updated successfully!");
@@ -72,19 +79,21 @@ export default function MyProfile() {
   }
 
   return (
-    <div className="p-4 md:p-8">
-        <Card className="border-0 shadow-none">
-            <CardHeader>
-                <CardTitle className="flex items-center gap-3 text-2xl font-bold text-gray-800">
-                    <User className="w-6 h-6 text-blue-600"/>
-                    My Profile
-                </CardTitle>
-                <p className="text-gray-600">Update your contact information and details.</p>
-            </CardHeader>
-            <CardContent>
-                <ClientProfileForm client={client} onSubmit={handleProfileUpdate} />
-            </CardContent>
-        </Card>
-    </div>
+    <ClientAuthGuard>
+      <div className="p-4 md:p-8">
+          <Card className="border-0 shadow-none">
+              <CardHeader>
+                  <CardTitle className="flex items-center gap-3 text-2xl font-bold text-gray-800">
+                      <User className="w-6 h-6 text-blue-600"/>
+                      My Profile
+                  </CardTitle>
+                  <p className="text-gray-600">Update your contact information and details.</p>
+              </CardHeader>
+              <CardContent>
+                  <ClientProfileForm client={client} onSubmit={handleProfileUpdate} />
+              </CardContent>
+          </Card>
+      </div>
+    </ClientAuthGuard>
   );
 }

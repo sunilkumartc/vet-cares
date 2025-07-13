@@ -16,20 +16,36 @@ class MongoDBManager {
 
     try {
       let uri;
+      const isProduction = process.env.NODE_ENV === 'production';
+      
       if (typeof window === 'undefined') {
         // Server-side
-        uri = process.env.MONGODB_URI || 'mongodb://localhost:27017';
+        if (isProduction) {
+          // Production: Use MongoDB Atlas
+          uri = process.env.MONGODB_URI || 'mongodb+srv://sunilkumartc89:IJLOURnjitHsiFiS@cluster0.yy1jozd.mongodb.net/';
+          console.log('Connecting to MongoDB Atlas (Production)...');
+        } else {
+          // Development: Use localhost
+          uri = process.env.MONGODB_URI || 'mongodb://localhost:27017';
+          console.log('Connecting to MongoDB localhost (Development)...');
+        }
       } else {
         // Client-side (should not happen in server)
         uri = import.meta.env.VITE_MONGODB_URI || 'mongodb://localhost:27017';
       }
 
-      this.client = new MongoClient(uri);
+      this.client = new MongoClient(uri, {
+        // Add connection options for better reliability
+        maxPoolSize: 10,
+        serverSelectionTimeoutMS: 5000,
+        socketTimeoutMS: 45000,
+      });
+      
       await this.client.connect();
       this.db = this.client.db('vet-cares');
       this.isConnected = true;
 
-      console.log('Connected to MongoDB');
+      console.log(`Connected to MongoDB: ${isProduction ? 'Atlas (Production)' : 'Localhost (Development)'}`);
       return this.db;
     } catch (error) {
       console.error('MongoDB connection failed:', error);

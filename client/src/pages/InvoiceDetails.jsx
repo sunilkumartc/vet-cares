@@ -58,8 +58,8 @@ export default function InvoiceDetails() {
           setInvoice(invoiceData);
           // Fetch client, pet, and tenant details concurrently
           const [clientData, petData, tenantData] = await Promise.all([
-            invoiceData.client_id ? TenantClient.get(invoiceData.client_id) : Promise.resolve(null),
-            invoiceData.pet_id ? TenantPet.get(invoiceData.pet_id) : Promise.resolve(null),
+            invoiceData.client_id && invoiceData.client_id !== 'undefined' ? TenantClient.get(invoiceData.client_id) : Promise.resolve(null),
+            invoiceData.pet_id && invoiceData.pet_id !== 'undefined' ? TenantPet.get(invoiceData.pet_id) : Promise.resolve(null),
             Promise.resolve(TenantManager.getCurrentTenant())
           ]);
           setClient(clientData);

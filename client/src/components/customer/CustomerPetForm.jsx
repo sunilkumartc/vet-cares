@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PawPrint, Save, X, RefreshCw, Upload } from "lucide-react";
 import { generatePetId } from "@/api/functions";
-import { UploadFile } from "@/api/integrations";
+import { uploadPetPhoto, validatePetPhoto, generatePetPhotoPreview, cleanupPetPhotoPreview } from "@/api/petPhotoUpload";
 
 const speciesOptions = ["dog", "cat", "bird", "rabbit", "hamster", "fish", "reptile", "other"];
 const genderOptions = ["male", "female", "unknown"];
@@ -31,11 +31,26 @@ export default function CustomerPetForm({ pet, onSubmit, onCancel }) {
   const [formData, setFormData] = useState(getInitialFormData());
   const [generatingId, setGeneratingId] = useState(false);
   const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
 
   useEffect(() => {
     setFormData(getInitialFormData());
+    // Set initial image preview if pet has photo_url
+    if (pet?.photo_url) {
+      setImagePreview(pet.photo_url);
+    }
   }, [pet]);
+
+  // Cleanup preview URL when component unmounts
+  useEffect(() => {
+    return () => {
+      if (imagePreview && imagePreview.startsWith('blob:')) {
+        cleanupPetPhotoPreview(imagePreview);
+      }
+    };
+  }, [imagePreview]);
 
   useEffect(() => {
     if (!pet && formData.species && !formData.pet_id) {
@@ -73,6 +88,7 @@ export default function CustomerPetForm({ pet, onSubmit, onCancel }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setUploading(true);
+    setUploadError(null);
 
     let submitData = {
       ...formData,
@@ -81,21 +97,57 @@ export default function CustomerPetForm({ pet, onSubmit, onCancel }) {
 
     if (imageFile) {
       try {
-        const { file_url } = await UploadFile({ file: imageFile });
-        submitData.photo_url = file_url;
+        // Validate the image file
+        const validation = validatePetPhoto(imageFile);
+        if (!validation.isValid) {
+          setUploadError(validation.errors.join(', '));
+          setUploading(false);
+          return;
+        }
+
+        // Upload pet photo to S3
+        const petId = pet?.id || pet?._id;
+        const uploadResult = await uploadPetPhoto(imageFile, petId);
+        submitData.photo_url = uploadResult.url;
+        console.log('Pet photo uploaded successfully:', uploadResult);
       } catch (error) {
-        console.error("Error uploading image:", error);
-        alert("Failed to upload image. Please try again.");
+        console.error("Error uploading pet photo:", error);
+        setUploadError(`Failed to upload image: ${error.message}`);
         setUploading(false);
         return;
       }
     }
     
-    await onSubmit(submitData);
-    setUploading(false);
+    try {
+      await onSubmit(submitData);
+    } catch (error) {
+      console.error("Error saving pet:", error);
+      setUploadError(`Failed to save pet: ${error.message}`);
+    } finally {
+      setUploading(false);
+    }
   };
 
-  const currentImage = imageFile ? URL.createObjectURL(imageFile) : formData.photo_url;
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate the file
+      const validation = validatePetPhoto(file);
+      if (!validation.isValid) {
+        setUploadError(validation.errors.join(', '));
+        return;
+      }
+      
+      setUploadError(null);
+      setImageFile(file);
+      
+      // Generate preview
+      const preview = generatePetPhotoPreview(file);
+      setImagePreview(preview);
+    }
+  };
+
+  const currentImage = imagePreview || formData.photo_url;
 
   return (
     <Card className="max-w-4xl mx-auto my-8 bg-white/90 backdrop-blur-sm border-0 shadow-2xl">
@@ -144,7 +196,16 @@ export default function CustomerPetForm({ pet, onSubmit, onCancel }) {
                   <PawPrint className="w-12 h-12 text-gray-400" />
                 )}
               </div>
-              <Input id="photo" type="file" onChange={(e) => setImageFile(e.target.files[0])} accept="image/*" className="text-xs" />
+              <Input 
+                id="photo" 
+                type="file" 
+                onChange={handleImageChange} 
+                accept="image/jpeg,image/jpg,image/png,image/gif,image/webp" 
+                className="text-xs" 
+              />
+              {uploadError && (
+                <p className="text-xs text-red-500 mt-1">{uploadError}</p>
+              )}
             </div>
           </div>
           
