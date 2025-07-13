@@ -11,8 +11,11 @@ class MongoDBManager {
     this.isConnected = false;
   }
 
-  async connect() {
+  async connect(retryCount = 0) {
     if (this.isConnected) return this.db;
+
+    const maxRetries = 3;
+    const retryDelay = 2000; // 2 seconds
 
     try {
       let uri;
@@ -22,7 +25,11 @@ class MongoDBManager {
         // Server-side
         if (isProduction) {
           // Production: Use MongoDB Atlas
-          uri = process.env.MONGODB_URI || 'mongodb+srv://sunilkumartc89:IJLOURnjitHsiFiS@cluster0.yy1jozd.mongodb.net/';
+          const baseUri = process.env.MONGODB_URI || 'mongodb+srv://sunilkumartc89:IJLOURnjitHsiFiS@cluster0.yy1jozd.mongodb.net/';
+          // Ensure proper connection string format
+          uri = baseUri.includes('?') 
+            ? `${baseUri}&retryWrites=true&w=majority`
+            : `${baseUri}?retryWrites=true&w=majority`;
           console.log('Connecting to MongoDB Atlas (Production)...');
         } else {
           // Development: Use localhost
@@ -34,12 +41,27 @@ class MongoDBManager {
         uri = import.meta.env.VITE_MONGODB_URI || 'mongodb://localhost:27017';
       }
 
-      this.client = new MongoClient(uri, {
-        // Add connection options for better reliability
+      // MongoDB Atlas connection options
+      const options = {
         maxPoolSize: 10,
-        serverSelectionTimeoutMS: 5000,
+        serverSelectionTimeoutMS: 30000,
         socketTimeoutMS: 45000,
-      });
+        connectTimeoutMS: 30000,
+        retryWrites: true,
+        w: 'majority',
+      };
+
+      // Add SSL options for MongoDB Atlas
+      if (isProduction) {
+        options.ssl = true;
+        options.sslValidate = true;
+        options.tls = true;
+        options.tlsAllowInvalidCertificates = false;
+        options.tlsAllowInvalidHostnames = false;
+        options.tlsInsecure = false;
+      }
+
+      this.client = new MongoClient(uri, options);
       
       await this.client.connect();
       this.db = this.client.db('vet-cares');
@@ -48,7 +70,14 @@ class MongoDBManager {
       console.log(`Connected to MongoDB: ${isProduction ? 'Atlas (Production)' : 'Localhost (Development)'}`);
       return this.db;
     } catch (error) {
-      console.error('MongoDB connection failed:', error);
+      console.error(`MongoDB connection failed (attempt ${retryCount + 1}/${maxRetries + 1}):`, error.message);
+      
+      if (retryCount < maxRetries) {
+        console.log(`Retrying connection in ${retryDelay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+        return this.connect(retryCount + 1);
+      }
+      
       throw error;
     }
   }
