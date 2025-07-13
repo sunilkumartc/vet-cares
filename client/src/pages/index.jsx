@@ -63,6 +63,8 @@ import Analytics from "./Analytics";
 import TenantManagement from "./TenantManagement";
 import SystemAdminLogin from "./SystemAdminLogin";
 
+import PrescriptionPrintPreview from "./PrescriptionPrintPreview";
+
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
@@ -222,6 +224,9 @@ function PagesContent() {
                 {/* System Admin Routes */}
                 <Route path="/system-admin-login" element={<SystemAdminLogin />} />
                 <Route path="/tenant-management" element={<TenantManagement />} />
+                
+                <Route path="/PrescriptionPrintPreview" element={<PrescriptionPrintPreview />} />
+                <Route path="/prescription-preview" element={<PrescriptionPrintPreview />} />
                 
             </Routes>
         </Layout>

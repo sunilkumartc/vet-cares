@@ -21,6 +21,7 @@ import MemoWidget from "../components/memos/MemoWidget";
 import MemoForm from "../components/memos/MemoForm";
 import VitalTrendChart from "../components/vitals/VitalTrendChart";
 import DateRangePicker from "../components/vitals/DateRangePicker";
+import MedicalRecordViewer from '../components/customer/MedicalRecordViewer';
 
 const getPreciseAge = (birthDate) => {
   if (!birthDate) return 'Unknown age';
@@ -83,6 +84,7 @@ export default function ClientManagement() {
     to: new Date()
   });
   const [vitalResolution, setVitalResolution] = useState('day');
+  const [viewingMedicalRecord, setViewingMedicalRecord] = useState(null);
 
   useEffect(() => {
     loadAllData();
@@ -412,7 +414,7 @@ export default function ClientManagement() {
         const tax = subtotal * (taxRate / 100);
         const total = subtotal + tax;
 
-        await TenantInvoice.update(draftInvoice.id, {
+        await ApiInvoice.update(draftInvoice.id, {
           items: updatedItems,
           subtotal: subtotal,
           tax_amount: tax,
@@ -424,7 +426,7 @@ export default function ClientManagement() {
         const tax = subtotal * (taxRate / 100);
         const total = subtotal + tax;
 
-        await TenantInvoice.create({
+        await ApiInvoice.create({
             client_id: client.id,
             pet_id: pet.id,
             invoice_number: `DRAFT-${Date.now()}`,
@@ -535,15 +537,17 @@ export default function ClientManagement() {
 
   if (showInvoiceForm) { // New condition for InvoiceForm
     return (
-      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-        <InvoiceForm
-          invoice={editingInvoice}
-          clients={selectedClient ? [selectedClient] : []} // Pass selected client as a single-element array
-          pets={getClientPets(selectedClient?._id || selectedClient?.id)}
-          products={products} // Pass products for inventory selection
-          onSubmit={handleInvoiceSubmit}
-          onCancel={handleCancel}
-        />
+      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-2 sm:p-4 overflow-y-auto">
+        <div className="w-full max-w-7xl max-h-full overflow-y-auto">
+          <InvoiceForm
+            invoice={editingInvoice}
+            clients={selectedClient ? [selectedClient] : []} // Pass selected client as a single-element array
+            pets={getClientPets(selectedClient?._id || selectedClient?.id)}
+            products={products} // Pass products for inventory selection
+            onSubmit={handleInvoiceSubmit}
+            onCancel={handleCancel}
+          />
+        </div>
       </div>
     );
   }
@@ -852,6 +856,11 @@ export default function ClientManagement() {
                               <div className="mt-2">
                                 <h4 className="font-semibold mb-1">Plan</h4>
                                 <p className="text-sm text-gray-600">{event.plan}</p>
+                              </div>
+                              <div className="mt-4 flex gap-2">
+                                <Button variant="outline" size="sm" onClick={() => setViewingMedicalRecord(event)}>
+                                  View & Print Prescription
+                                </Button>
                               </div>
                             </TimelineEvent>
                           );
@@ -1236,74 +1245,15 @@ export default function ClientManagement() {
             </div>
           </div>
         </div>
+        {/* MedicalRecordViewer Dialog for printing */}
+        <MedicalRecordViewer
+          record={viewingMedicalRecord}
+          onClose={() => setViewingMedicalRecord(null)}
+          pets={pets}
+          clients={clients}
+          staff={staff}
+        />
       </div>
     );
   }
-
-  return (
-    <div className="p-4 md:p-8 space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Client Management</h1>
-          <p className="text-gray-600 mt-1">Search and manage client records with their pets and medical history</p>
-        </div>
-      </div>
-
-      {/* Quick Stats */}
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-              <Users className="w-6 h-6 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{clients.length}</p>
-              <p className="text-sm text-gray-600">Total Clients</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                <PawPrint className="w-6 h-6 text-green-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900">{pets.length}</p>
-                <p className="text-sm text-gray-600">Registered Pets</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                <FileText className="w-6 h-6 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900">{medicalRecords.length}</p>
-                <p className="text-sm text-gray-600">Medical Records</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Instructions */}
-      <Card>
-        <CardContent className="p-6 text-center">
-          <Search className="w-12 h-12 mx-auto mb-4 text-blue-500" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Use Global Search</h3>
-          <p className="text-gray-600">
-            Click the "Search Client/Patient" button in the top navigation bar to find and access client records quickly.
-          </p>
-        </CardContent>
-      </Card>
-    </div>
-  );
 }

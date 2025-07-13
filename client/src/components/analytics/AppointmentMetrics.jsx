@@ -14,9 +14,14 @@ export default function AppointmentMetrics({ appointments, dateRange }) {
     const endDate = dateRange?.to || endOfDay(today);
 
     const periodAppointments = appointments.filter(apt => {
-      // Assuming apt.appointment_date is a string in YYYY-MM-DD format
-      const aptDate = parseISO(apt.appointment_date);
-      return isWithinInterval(aptDate, { start: startDate, end: endDate });
+      if (!apt.appointment_date) return false;
+      try {
+        const aptDate = parseISO(apt.appointment_date);
+        return isWithinInterval(aptDate, { start: startDate, end: endDate });
+      } catch (error) {
+        console.warn('Invalid appointment_date in AppointmentMetrics:', apt.appointment_date);
+        return false;
+      }
     });
 
     // Status breakdown for the period

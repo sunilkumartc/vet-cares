@@ -13,9 +13,15 @@ export default function FinancialOverview({ invoices, dateRange }) {
     const startDate = dateRange?.from || startOfDay(subDays(today, 30));
     const endDate = dateRange?.to || endOfDay(today);
 
-    const periodInvoices = invoices.filter(inv => 
-      isWithinInterval(parseISO(inv.invoice_date), { start: startDate, end: endDate })
-    );
+    const periodInvoices = invoices.filter(inv => {
+      if (!inv.invoice_date) return false;
+      try {
+        return isWithinInterval(parseISO(inv.invoice_date), { start: startDate, end: endDate });
+      } catch (error) {
+        console.warn('Invalid invoice_date in FinancialOverview:', inv.invoice_date);
+        return false;
+      }
+    });
 
     const totalRevenue = periodInvoices
       .filter(inv => inv.status === 'paid')
@@ -55,10 +61,15 @@ export default function FinancialOverview({ invoices, dateRange }) {
         const dayEnd = endOfDay(date);
         
         const dayRevenue = invoices
-            .filter(inv => 
-              inv.status === 'paid' && 
-              isWithinInterval(parseISO(inv.invoice_date), { start: dayStart, end: dayEnd })
-            )
+            .filter(inv => {
+              if (!inv.invoice_date || inv.status !== 'paid') return false;
+              try {
+                return isWithinInterval(parseISO(inv.invoice_date), { start: dayStart, end: dayEnd });
+              } catch (error) {
+                console.warn('Invalid invoice_date in daily revenue calculation:', inv.invoice_date);
+                return false;
+              }
+            })
             .reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
         
         dailyRevenue.push({

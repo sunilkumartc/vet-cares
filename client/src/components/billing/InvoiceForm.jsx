@@ -143,8 +143,8 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
   };
 
   return (
-    <Card className="w-full max-w-6xl mx-auto">
-      <CardHeader>
+    <Card className="w-full max-w-6xl mx-auto bg-white">
+      <CardHeader className="sticky top-0 bg-white z-10 border-b">
         <CardTitle className="flex items-center gap-2">
           <FileText className="w-5 h-5" />
           {invoice ? 'Edit Invoice' : 'Create Invoice'}
@@ -261,7 +261,7 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 items-end">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4 items-end">
                     {/* Product/Service Name */}
                     <div className="lg:col-span-2 space-y-2">
                       <Label>Service / Product Name *</Label>
@@ -346,7 +346,7 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
           </div>
 
           {/* Invoice Totals & Other Details - Responsive */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -457,12 +457,12 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
           </div>
 
           {/* Action Buttons - Responsive */}
-          <div className="flex flex-col sm:flex-row justify-end gap-3 pt-6 border-t">
-            <Button type="button" variant="outline" onClick={onCancel}>
+          <div className="flex flex-col sm:flex-row justify-end gap-3 pt-6 border-t sticky bottom-0 bg-white">
+            <Button type="button" variant="outline" onClick={onCancel} className="w-full sm:w-auto">
               <X className="w-4 h-4 mr-2" />
               Cancel
             </Button>
-            <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+            <Button type="submit" className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
               <Save className="w-4 h-4 mr-2" />
               {invoice ? 'Update Invoice' : 'Create Invoice'}
             </Button>

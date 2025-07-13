@@ -154,6 +154,8 @@ export default function ClinicProfile() {
           const fileExtension = logoFile.name.split('.').pop();
           const fileName = `clinic-logos/${tenant?.slug || 'default'}-logo-${timestamp}.${fileExtension}`;
           formData.append('fileName', fileName);
+          formData.append('fileType', 'clinic-logo');
+          formData.append('tenant_id', tenant?._id || 'default');
 
           const response = await fetch('/api/upload-to-s3', {
             method: 'POST',
@@ -187,7 +189,7 @@ export default function ClinicProfile() {
         headers['X-Tenant-ID'] = currentTenant._id;
       }
 
-      const response = await fetch('/api/upload-clinic-logo', {
+      const response = await fetch('/api/clinic/upload-clinic-logo', {
         method: 'POST',
         headers,
         body: formData

@@ -35,7 +35,7 @@ const adminNavigation = [
 ];
 
 const settingsNavigation = [
-  { title: "Settings", url: createPageUrl("Settings"), icon: Settings },
+  { title: "Clinic Profile", url: createPageUrl("Settings"), icon: Settings },
   { title: "Client Management", url: createPageUrl("Clients"), icon: Users },
   { title: "Pet Management", url: createPageUrl("Pets"), icon: PawPrint },
   { title: "Vaccine Settings", url: createPageUrl("VaccineSettings"), icon: Syringe },

@@ -8,8 +8,12 @@ import { Users, Eye, EyeOff, Heart } from "lucide-react";
 
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { useTheme } from "@/contexts/ThemeContext";
 
 export default function StaffLogin() {
+  const { getBranding, getTenantInfo } = useTheme();
+  const tenant = getTenantInfo();
+  
   const [credentials, setCredentials] = useState({
     email: "",
     password: ""
@@ -89,7 +93,9 @@ export default function StaffLogin() {
           <CardTitle className="text-2xl font-bold text-gray-900">
             Staff Portal
           </CardTitle>
-          <p className="text-gray-600">Dr. Ravi's Pet Clinic</p>
+          <p className="text-gray-600">
+            {getBranding('clinicName') || tenant?.name || 'VetVault Clinic'}
+          </p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">

@@ -14,15 +14,27 @@ export default function ClientPetMetrics({ clients, pets, dateRange }) {
 
     // TenantClient metrics
     const totalClients = clients.length;
-    const newClientsInPeriod = clients.filter(client =>
-      isWithinInterval(parseISO(client.created_date), { start: startDate, end: endDate })
-    ).length;
+    const newClientsInPeriod = clients.filter(client => {
+      if (!client.created_date) return false;
+      try {
+        return isWithinInterval(parseISO(client.created_date), { start: startDate, end: endDate });
+      } catch (error) {
+        console.warn('Invalid client created_date in ClientPetMetrics:', client.created_date);
+        return false;
+      }
+    }).length;
 
     // TenantPet metrics
     const totalPets = pets.length;
-    const newPetsInPeriod = pets.filter(pet =>
-      isWithinInterval(parseISO(pet.created_date), { start: startDate, end: endDate })
-    ).length;
+    const newPetsInPeriod = pets.filter(pet => {
+      if (!pet.created_date) return false;
+      try {
+        return isWithinInterval(parseISO(pet.created_date), { start: startDate, end: endDate });
+      } catch (error) {
+        console.warn('Invalid pet created_date in ClientPetMetrics:', pet.created_date);
+        return false;
+      }
+    }).length;
 
     // Species breakdown
     const speciesCount = {};
@@ -44,9 +56,15 @@ export default function ClientPetMetrics({ clients, pets, dateRange }) {
       const dayStart = startOfDay(date);
       const dayEnd = endOfDay(date);
       
-      const newClients = clients.filter(client =>
-        isWithinInterval(parseISO(client.created_date), { start: dayStart, end: dayEnd })
-      ).length;
+      const newClients = clients.filter(client => {
+        if (!client.created_date) return false;
+        try {
+          return isWithinInterval(parseISO(client.created_date), { start: dayStart, end: dayEnd });
+        } catch (error) {
+          console.warn('Invalid client created_date in trend calculation:', client.created_date);
+          return false;
+        }
+      }).length;
 
       clientTrend.push({
         date: format(date, 'MMM dd'),

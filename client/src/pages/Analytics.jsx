@@ -141,24 +141,55 @@ export default function Analytics() {
     const startDate = dateRange.from || startOfDay(subDays(today, 30));
     const endDate = dateRange.to || endOfDay(today);
 
-    const periodInvoices = dashboardData.invoices.filter(inv =>
-      isWithinInterval(parseISO(inv.invoice_date), { start: startDate, end: endDate })
-    );
+    // Ensure dashboardData has the required arrays
+    const invoices = dashboardData.invoices || [];
+    const clients = dashboardData.clients || [];
+    const pets = dashboardData.pets || [];
+    const appointments = dashboardData.appointments || [];
+
+    const periodInvoices = invoices.filter(inv => {
+      if (!inv.invoice_date) return false;
+      try {
+        return isWithinInterval(parseISO(inv.invoice_date), { start: startDate, end: endDate });
+      } catch (error) {
+        console.warn('Invalid invoice_date:', inv.invoice_date);
+        return false;
+      }
+    });
+    
     const periodRevenue = periodInvoices
       .filter(inv => inv.status === 'paid')
       .reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
 
-    const periodClients = dashboardData.clients.filter(client =>
-      isWithinInterval(parseISO(client.created_date), { start: startDate, end: endDate })
-    ).length;
+    const periodClients = clients.filter(client => {
+      if (!client.created_date) return false;
+      try {
+        return isWithinInterval(parseISO(client.created_date), { start: startDate, end: endDate });
+      } catch (error) {
+        console.warn('Invalid client created_date:', client.created_date);
+        return false;
+      }
+    }).length;
 
-    const periodPets = dashboardData.pets.filter(pet =>
-      isWithinInterval(parseISO(pet.created_date), { start: startDate, end: endDate })
-    ).length;
+    const periodPets = pets.filter(pet => {
+      if (!pet.created_date) return false;
+      try {
+        return isWithinInterval(parseISO(pet.created_date), { start: startDate, end: endDate });
+      } catch (error) {
+        console.warn('Invalid pet created_date:', pet.created_date);
+        return false;
+      }
+    }).length;
 
-    const periodAppointments = dashboardData.appointments.filter(apt =>
-      isWithinInterval(parseISO(apt.appointment_date), { start: startDate, end: endDate })
-    );
+    const periodAppointments = appointments.filter(apt => {
+      if (!apt.appointment_date) return false;
+      try {
+        return isWithinInterval(parseISO(apt.appointment_date), { start: startDate, end: endDate });
+      } catch (error) {
+        console.warn('Invalid appointment_date:', apt.appointment_date);
+        return false;
+      }
+    });
 
     return {
       periodRevenue,
@@ -302,7 +333,7 @@ export default function Analytics() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-3">
             <FinancialOverview
-              invoices={dashboardData.invoices}
+              invoices={dashboardData.invoices || []}
               dateRange={dateRange}
             />
         </div>
@@ -311,13 +342,13 @@ export default function Analytics() {
       {/* Secondary Metrics */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <ClientPetMetrics
-          clients={dashboardData.clients}
-          pets={dashboardData.pets}
+          clients={dashboardData.clients || []}
+          pets={dashboardData.pets || []}
           dateRange={dateRange}
         />
 
         <AppointmentMetrics
-          appointments={dashboardData.appointments}
+          appointments={dashboardData.appointments || []}
           dateRange={dateRange}
         />
       </div>
@@ -325,23 +356,23 @@ export default function Analytics() {
       {/* Medical & Inventory */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <MedicalMetrics
-          medicalRecords={dashboardData.medicalRecords}
-          vaccinations={dashboardData.vaccinations}
-          diagnosticReports={dashboardData.diagnosticReports}
+          medicalRecords={dashboardData.medicalRecords || []}
+          vaccinations={dashboardData.vaccinations || []}
+          diagnosticReports={dashboardData.diagnosticReports || []}
           dateRange={dateRange}
         />
 
         <InventoryAlerts
-          products={dashboardData.products}
-          batches={dashboardData.batches}
+          products={dashboardData.products || []}
+          batches={dashboardData.batches || []}
         />
       </div>
 
       {/* Operational Insights */}
       <OperationalInsights
-        appointments={dashboardData.appointments}
-        clients={dashboardData.clients}
-        pets={dashboardData.pets}
+        appointments={dashboardData.appointments || []}
+        clients={dashboardData.clients || []}
+        pets={dashboardData.pets || []}
       />
     </div>
   );
