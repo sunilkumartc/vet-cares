@@ -25,11 +25,7 @@ class MongoDBManager {
         // Server-side
         if (isProduction) {
           // Production: Use MongoDB Atlas
-          const baseUri = process.env.MONGODB_URI || 'mongodb+srv://sunilkumartc89:IJLOURnjitHsiFiS@cluster0.yy1jozd.mongodb.net/';
-          // Ensure proper connection string format
-          uri = baseUri.includes('?') 
-            ? `${baseUri}&retryWrites=true&w=majority`
-            : `${baseUri}?retryWrites=true&w=majority`;
+          uri = process.env.MONGODB_URI || 'mongodb+srv://sunilkumartc89:IJLOURnjitHsiFiS@cluster0.yy1jozd.mongodb.net/?retryWrites=true&w=majority';
           console.log('Connecting to MongoDB Atlas (Production)...');
         } else {
           // Development: Use localhost
@@ -51,11 +47,9 @@ class MongoDBManager {
         w: 'majority',
       };
 
-      // Add TLS options for MongoDB Atlas
+      // Add minimal TLS options for MongoDB Atlas
       if (isProduction) {
         options.tls = true;
-        options.tlsAllowInvalidCertificates = false;
-        options.tlsAllowInvalidHostnames = false;
       }
 
       this.client = new MongoClient(uri, options);

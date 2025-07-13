@@ -185,7 +185,7 @@ router.post('/upload-clinic-logo', upload.single('logo'), async (req, res) => {
     }
 
     // Generate public URL for the uploaded file
-    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+    const baseUrl = process.env.BASE_URL || 'http://localhost:3001';
     const logoUrl = `${baseUrl}/uploads/clinic-logos/${req.file.filename}`;
 
     // Update tenant record with new logo URL
@@ -217,17 +217,7 @@ router.post('/upload-clinic-logo', upload.single('logo'), async (req, res) => {
   }
 });
 
-// Serve uploaded logo files
-router.get('/uploads/clinic-logos/:filename', (req, res) => {
-  const filename = req.params.filename;
-  const filePath = path.join(__dirname, '../uploads/clinic-logos', filename);
-  
-  res.sendFile(filePath, (err) => {
-    if (err) {
-      res.status(404).json({ error: 'Logo file not found' });
-    }
-  });
-});
+
 
 // Delete clinic logo
 router.delete('/profile/logo', async (req, res) => {
