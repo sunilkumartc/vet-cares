@@ -227,7 +227,7 @@ app.get('/api/staff', async (req, res) => {
 app.post('/api/staff', async (req, res) => {
   try {
     const { tenant_id, ...data } = req.body;
-    const collection = db.collection('staff');
+    const collection = dbUtils.getCollection('staff');
     const staff = {
       _id: new ObjectId(),
       tenant_id,
