@@ -3,7 +3,7 @@ const csv = require('csv-parser');
 const { MongoClient, ObjectId } = require('mongodb');
 
 // --- CONFIG ---
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/vet-cares';
+const MONGO_URI = 'mongodb+srv://sunilkumartc89:IJLOURnjitHsiFiS@cluster0.yy1jozd.mongodb.net/?retryWrites=true&w=majority';
 const CSV_FILE = 'clients.csv';
 
 // --- USAGE ---
