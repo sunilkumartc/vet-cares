@@ -26,6 +26,7 @@ import medicalFilesRoutes from './routes/medical-files.js';
 import clinicProfileRoutes from './routes/clinic-profile.js';
 import otpRoutes from './routes/otp.js';
 import { dbUtils } from './lib/mongodb.js';
+import clientsRoute from './routes/clients.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -82,6 +83,7 @@ app.use('/api', vetSoapSuggestRoutes);
 app.use('/api', medicalFilesRoutes);
 app.use('/api/clinic', clinicProfileRoutes);
 app.use('/api/otp', otpRoutes);
+app.use('/api/clients', clientsRoute);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));

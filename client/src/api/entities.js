@@ -2,6 +2,7 @@
 // Replaces Base44 SDK entities with MongoDB-native implementations
 
 import { TenantManager } from '@/lib/tenant.js';
+import apiClient from './apiClient.js';
 
 // Base Entity Class
 class BaseEntity {
@@ -541,3 +542,17 @@ export const entities = {
   TenantReportTemplate: new TenantReportTemplate(),
   User
 };
+
+class ClientApi {
+  async create(data) {
+    // Get tenant context if available
+    let tenant_id = null;
+    try {
+      const tenant = await apiClient.entities.Tenant.getCurrentTenant();
+      tenant_id = tenant?._id || tenant?.id;
+    } catch (e) {}
+    return apiClient.api.post('/clients', { ...data, tenant_id });
+  }
+}
+
+export const ApiClient = new ClientApi();

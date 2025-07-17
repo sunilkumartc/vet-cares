@@ -14,11 +14,16 @@ export default function ClientForm({ client, onSubmit, onCancel }) {
     phone: client?.phone || "",
     address: client?.address || "",
     emergency_contact: client?.emergency_contact || "",
-    notes: client?.notes || ""
+    notes: client?.notes || "",
+    sendWelcomeMail: false
   });
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleCheckboxChange = (e) => {
+    setFormData(prev => ({ ...prev, sendWelcomeMail: e.target.checked }));
   };
 
   const handleSubmit = (e) => {
@@ -107,6 +112,16 @@ export default function ClientForm({ client, onSubmit, onCancel }) {
               rows={3}
               placeholder="Any special notes about this client..."
             />
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <input
+              id="sendWelcomeMail"
+              type="checkbox"
+              checked={formData.sendWelcomeMail}
+              onChange={handleCheckboxChange}
+            />
+            <Label htmlFor="sendWelcomeMail">Send Welcome Mail</Label>
           </div>
 
           <div className="flex justify-end gap-3 pt-4">
