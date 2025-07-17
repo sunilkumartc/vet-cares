@@ -208,7 +208,7 @@ export default function SalesReports() {
           </style>
         </head>
         <body>
-          <h1>Dr. Ravi TenantPet Portal - Sales Report</h1>
+          <h1>Dr. Ravi Pet Portal - Sales Report</h1>
           <p><strong>Report Type:</strong> ${reportType === 'overview' ? 'Overview' : reportType === 'products' ? 'Product Analysis' : 'Customer Insights'}</p>
           <p><strong>Date Range:</strong> ${format(dateRange.from, 'MMM dd, yyyy')} - ${format(dateRange.to, 'MMM dd, yyyy')}</p>
           <p><strong>Generated:</strong> ${format(new Date(), 'PPP')}</p>

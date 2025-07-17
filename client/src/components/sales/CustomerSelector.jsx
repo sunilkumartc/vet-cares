@@ -262,7 +262,7 @@ export default function CustomerSelector({ selectedCustomer, selectedPet, onCust
               <div>
                 <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
                   <PawPrint className="w-4 h-4" />
-                  Select TenantPet (Optional)
+                  Select Pet (Optional)
                 </h4>
                 <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto">
                   {pets.map(pet => (

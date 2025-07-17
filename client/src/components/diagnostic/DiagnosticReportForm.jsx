@@ -169,7 +169,7 @@ export default function DiagnosticReportForm({ report, pets, clients, templates,
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="pet_id">TenantPet *</Label>
+              <Label htmlFor="pet_id">Pet *</Label>
               <Select
                 value={formData.pet_id}
                 onValueChange={(value) => handleChange('pet_id', value)}

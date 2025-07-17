@@ -42,7 +42,7 @@ export default function VirtualChat() {
 
     try {
       const response = await InvokeLLM({
-        prompt: `You are a helpful AI assistant for Dr. Ravi's TenantPet Clinic in Malleshwaram, Bengaluru. 
+        prompt: `You are a helpful AI assistant for Dr. Ravi's Pet Clinic in Malleshwaram, Bengaluru. 
         
         Clinic Details:
         - Address: No. 32, 4th temple Street road, 15th Cross Rd, Malleshwaram, Bengaluru, Karnataka 560003

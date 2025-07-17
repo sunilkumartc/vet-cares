@@ -377,7 +377,7 @@ export default function ClientManagement() {
   const handleAddToBillSubmit = async (itemData) => { // Renamed from handleAddToBill
     const { client, pet } = billingTarget;
     if (!client || !pet) {
-      alert('Error: TenantClient or pet not selected for billing.');
+      alert('Error: Client or pet not selected for billing.');
       return;
     }
 

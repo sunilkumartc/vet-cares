@@ -154,7 +154,7 @@ export default function CheckoutForm({ cart, customer, pet, total, onComplete, o
                   )}
                   {pet && (
                     <p className="text-sm">
-                      <strong>TenantPet:</strong> {pet.name} ({pet.species})
+                      <strong>Pet:</strong> {pet.name} ({pet.species})
                     </p>
                   )}
                 </div>

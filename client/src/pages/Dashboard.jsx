@@ -201,7 +201,7 @@ export default function Dashboard() {
               <Button variant="outline" className="w-full justify-start gap-2 h-auto py-4">
                 <PawPrint className="w-5 h-5" />
                 <div className="text-left">
-                  <div className="font-medium">Register TenantPet</div>
+                  <div className="font-medium">Register Pet</div>
                   <div className="text-sm text-gray-500">Add a new pet profile</div>
                 </div>
               </Button>

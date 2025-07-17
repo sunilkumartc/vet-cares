@@ -239,7 +239,7 @@ export class TenantManager {
       branding: {
         logo: null,
         favicon: null,
-        clinicName: 'TenantPet Clinic',
+        clinicName: 'Pet Clinic',
         tagline: 'Caring for your pets with love and expertise'
       },
       features: {

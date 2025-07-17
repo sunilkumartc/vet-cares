@@ -107,14 +107,14 @@ class BaseApiEntity {
     
     // Get current tenant
     const tenant = await this.getCurrentTenant();
-    console.log(`API TenantClient - Listing ${this.entityName} with tenant:`, tenant);
+    console.log(`API Client - Listing ${this.entityName} with tenant:`, tenant);
     if (tenant) {
       params.tenant_id = tenant._id || tenant.id;
     }
-    console.log(`API TenantClient - Final request params:`, params);
+    console.log(`API Client - Final request params:`, params);
     
     const result = await this.api.get(`/${this.entityName}`, params);
-    console.log(`API TenantClient - ${this.entityName} result:`, result);
+    console.log(`API Client - ${this.entityName} result:`, result);
     return result;
   }
 

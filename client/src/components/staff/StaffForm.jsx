@@ -14,8 +14,8 @@ const roles = ["admin", "veterinarian", "receptionist"];
 const statuses = ["active", "inactive", "on_leave"];
 
 const rolePermissions = {
-  admin: ["all_access", "dashboard", "staff_management", "reporting", "system_settings"],
-  veterinarian: ["dashboard", "appointments", "medical_records", "prescriptions", "vaccinations", "billing", "client_management"],
+  admin: ["all_access", "dashboard", "staff_management", "system_settings","appointments"],
+  veterinarian: ["dashboard", "appointments", "medical_records", "prescriptions", "vaccinations", "billing", "client_management","diagnostic_reports","sales_dispense"],
   receptionist: ["dashboard", "appointments", "client_management", "basic_billing", "phone_support"]
 };
 
@@ -46,27 +46,34 @@ export default function StaffForm({ staff, onSubmit, onCancel }) {
   }, [staff]);
 
   useEffect(() => {
-    // Auto-set permissions based on role
-    if (formData.role && rolePermissions[formData.role]) {
+    if (!staff && formData.role && rolePermissions[formData.role]) {
       setFormData(prev => ({
         ...prev,
         permissions: rolePermissions[formData.role]
       }));
     }
-  }, [formData.role]);
+  }, [formData.role, staff]);
+  
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const handlePermissionChange = (permission, checked) => {
-    setFormData(prev => ({
-      ...prev,
-      permissions: checked 
-        ? [...prev.permissions, permission]
-        : prev.permissions.filter(p => p !== permission)
-    }));
+    setFormData(prev => {
+      let updatedPermissions;
+      if (checked) {
+        // If all is already selected, keep it or add the permission
+        updatedPermissions = [...new Set([...prev.permissions, permission])];
+      } else {
+        // If a specific permission is unchecked, remove it and also remove "all"
+        updatedPermissions = prev.permissions.filter(p => p !== permission && p !== "all");
+      }
+  
+      return { ...prev, permissions: updatedPermissions };
+    });
   };
+  
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -90,8 +97,8 @@ export default function StaffForm({ staff, onSubmit, onCancel }) {
   };
 
   const availablePermissions = [
-    "dashboard", "appointments", "client_management", "medical_records", "prescriptions", 
-    "vaccinations", "billing", "reporting", "staff_management", "system_settings"
+    "all","dashboard", "appointments", "client_management", "medical_records", "analytics","diagnostic_reports","inventory_management",
+    "vaccinations", "billing", "staff_management","sales_dispense","vaccine_settings","settings"
   ];
 
   return (
@@ -260,10 +267,13 @@ export default function StaffForm({ staff, onSubmit, onCancel }) {
               {availablePermissions.map(permission => (
                 <div key={permission} className="flex items-center space-x-2">
                   <Checkbox
-                    id={permission}
-                    checked={formData.permissions.includes(permission)}
-                    onCheckedChange={(checked) => handlePermissionChange(permission, checked)}
-                  />
+  id={permission}
+  checked={
+    formData.permissions.includes("all") || formData.permissions.includes(permission)
+  }
+  onCheckedChange={(checked) => handlePermissionChange(permission, checked)}
+/>
+
                   <Label htmlFor={permission} className="text-sm capitalize">
                     {permission.replace('_', ' ')}
                   </Label>

@@ -69,6 +69,16 @@ export default function Layout({ children, currentPageName }) {
   const [showClientForm, setShowClientForm] = React.useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
 
+  const canAccess = (pageTitle, permissions) => {
+    if (!permissions || permissions.length === 0) return false;
+    if (permissions.includes("all")) return true;
+  
+    // Normalize title to match permission keys
+    const normalizedTitle = pageTitle.toLowerCase().replace(/ /g, '_');
+    return permissions.includes(normalizedTitle);
+  };
+  
+
   React.useEffect(() => {
     // If loading is finished, and we have a staff session,
     // but we are on the Home page, redirect to the Dashboard.
@@ -297,60 +307,65 @@ export default function Layout({ children, currentPageName }) {
                 </div>
               </SidebarHeader>
               <SidebarContent className="flex flex-col">
-                <nav className="flex-1 px-4 py-4 space-y-2">
-                  {/* Main Navigation Section */}
-                  <div>
-                    <p className="px-4 pt-4 pb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Navigation</p>
-                    {adminNavigation.map((item) => (
-                      <Link
-                        key={item.title}
-                        to={item.url}
-                        className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                          location.pathname === item.url.split('?')[0]
-                            ? 'bg-blue-100 text-blue-700'
-                            : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                        }`}
-                      >
-                        <item.icon className="w-5 h-5" />
-                        <span>{item.title}</span>
-                      </Link>
-                    ))}
-                  </div>
+  <nav className="flex-1 px-4 py-4 space-y-2">
+    {/* Main Navigation Section */}
+    <div>
+      <p className="px-4 pt-4 pb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Navigation</p>
+      {adminNavigation
+        .filter((item) => staffSession?.permissions?.includes("all") || canAccess(item.title, staffSession.permissions))
+        .map((item) => (
+          <Link
+            key={item.title}
+            to={item.url}
+            className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              location.pathname === item.url.split('?')[0]
+                ? 'bg-blue-100 text-blue-700'
+                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+            }`}
+          >
+            <item.icon className="w-5 h-5" />
+            <span>{item.title}</span>
+          </Link>
+        ))}
+    </div>
 
-                  {/* Collapsible Settings Section */}
-                  <div>
-                    <p className="px-4 pt-6 pb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Management</p>
-                    <button
-                      onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-                      className="flex items-center justify-between w-full px-4 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Settings className="w-5 h-5" />
-                        <span>Settings</span>
-                      </div>
-                      <ChevronDown className={`w-5 h-5 transition-transform ${isSettingsOpen ? 'rotate-180' : ''}`} />
-                    </button>
-                    {isSettingsOpen && (
-                      <div className="pl-6 mt-1 space-y-1">
-                        {settingsNavigation.map((item) => (
-                          <Link
-                            key={item.title}
-                            to={item.url}
-                            className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                              location.pathname.startsWith(item.url)
-                                ? 'bg-purple-100 text-purple-700'
-                                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                            }`}
-                          >
-                            <item.icon className="w-5 h-5" />
-                            <span>{item.title}</span>
-                          </Link>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </nav>
-              </SidebarContent>
+    {/* Collapsible Settings Section */}
+    <div>
+      <p className="px-4 pt-6 pb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Management</p>
+      <button
+        onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+        className="flex items-center justify-between w-full px-4 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <Settings className="w-5 h-5" />
+          <span>Settings</span>
+        </div>
+        <ChevronDown className={`w-5 h-5 transition-transform ${isSettingsOpen ? 'rotate-180' : ''}`} />
+      </button>
+      {isSettingsOpen && (
+        <div className="pl-6 mt-1 space-y-1">
+          {settingsNavigation
+            .filter((item) => staffSession?.permissions?.includes("all") || canAccess(item.title, staffSession.permissions))
+            .map((item) => (
+              <Link
+                key={item.title}
+                to={item.url}
+                className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  location.pathname.startsWith(item.url)
+                    ? 'bg-purple-100 text-purple-700'
+                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                }`}
+              >
+                <item.icon className="w-5 h-5" />
+                <span>{item.title}</span>
+              </Link>
+            ))}
+        </div>
+      )}
+    </div>
+  </nav>
+</SidebarContent>
+
               <SidebarFooter>
                 <div className="px-3 py-4 space-y-2 text-center">
                   <p className="text-sm font-semibold">{staffSession.name}</p>

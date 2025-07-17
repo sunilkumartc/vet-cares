@@ -28,6 +28,7 @@ const rolePermissions = {
       "Prescription writing",
       "TenantVaccination records",
       "Treatment planning",
+      "Data export/import",
       "Billing creation",
       "Patient diagnosis",
       "Surgery scheduling"
