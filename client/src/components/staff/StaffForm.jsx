@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Users, Save, X, Eye, EyeOff } from "lucide-react";
+import { Users, Save, X, Eye, EyeOff, ArrowLeft } from "lucide-react"; // Added ArrowLeft
 import { format } from "date-fns";
 
 const roles = ["admin", "veterinarian", "receptionist"];
@@ -102,9 +101,20 @@ export default function StaffForm({ staff, onSubmit, onCancel }) {
   ];
 
   return (
-    <Card className="max-w-4xl mx-auto">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+    <Card className="max-w-7xl mx-auto w-full">
+      <CardHeader className="relative"> {/* Relative for positioning back button */}
+        {/* Back Arrow Button */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onCancel}
+          className="absolute top-2 left-2 p-0 w-16 h-16 hover:bg-transparent flex items-center justify-center" // Positioned top-left, sized for visibility
+          aria-label="Go back"
+        >
+          <ArrowLeft className="w-12 h-12 text-gray-600 hover:text-blue-800" /> {/* Large icon */}
+        </Button>
+        
+        <CardTitle className="flex items-center justify-center gap-2 text-center">
           <Users className="w-5 h-5 text-blue-600" />
           {staff ? 'Edit Staff Member' : 'Add New Staff Member'}
         </CardTitle>
@@ -267,12 +277,12 @@ export default function StaffForm({ staff, onSubmit, onCancel }) {
               {availablePermissions.map(permission => (
                 <div key={permission} className="flex items-center space-x-2">
                   <Checkbox
-  id={permission}
-  checked={
-    formData.permissions.includes("all") || formData.permissions.includes(permission)
-  }
-  onCheckedChange={(checked) => handlePermissionChange(permission, checked)}
-/>
+                    id={permission}
+                    checked={
+                      formData.permissions.includes("all") || formData.permissions.includes(permission)
+                    }
+                    onCheckedChange={(checked) => handlePermissionChange(permission, checked)}
+                  />
 
                   <Label htmlFor={permission} className="text-sm capitalize">
                     {permission.replace('_', ' ')}

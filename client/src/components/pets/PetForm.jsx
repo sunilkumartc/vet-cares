@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
-import { PawPrint, Save, X, RefreshCw } from "lucide-react"; // Added RefreshCw
+import { PawPrint, Save, X, RefreshCw, ArrowLeft } from "lucide-react"; // Added ArrowLeft
 import { format } from "date-fns";
 import { UploadFile } from "@/api/integrations"; // Kept existing import
 import { generatePetId } from "@/api/functions"; // Added new import
@@ -97,9 +97,20 @@ export default function PetForm({ pet, clients, onSubmit, onCancel }) {
   };
 
   return (
-    <Card className="max-w-4xl mx-auto">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+    <Card className="max-w-7xl mx-auto w-full">
+      <CardHeader className="relative"> {/* Relative for positioning back button */}
+        {/* Back Arrow Button */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onCancel}
+          className="absolute top-2 left-2 p-0 w-16 h-16 hover:bg-transparent flex items-center justify-center" // Positioned top-left, sized for visibility
+          aria-label="Go back"
+        >
+          <ArrowLeft className="w-12 h-12 text-gray-600 hover:text-blue-800" /> {/* Large icon */}
+        </Button>
+        
+        <CardTitle className="flex items-center justify-center gap-2 text-center">
           <PawPrint className="w-5 h-5 text-blue-600" />
           {pet ? 'Edit Pet Profile' : 'Register New Pet'}
         </CardTitle>

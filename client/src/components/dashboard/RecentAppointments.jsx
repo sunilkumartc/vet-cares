@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -68,10 +67,50 @@ export default function RecentAppointments({ appointments, pets, clients, loadin
               const pet = pets.find(p => p.id === appointment.pet_id);
               const client = clients.find(c => c.id === appointment.client_id);
               
+              // Guard: If no client, show a non-clickable version to avoid blank page
+              if (!client) {
+                console.warn(`No client found for appointment ${appointment.id}`);
+                return (
+                  <div
+                    key={appointment.id}
+                    className="flex items-center gap-4 p-4 border rounded-lg bg-gray-50"
+                  >
+                    {/* Same content, but no Link */}
+                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <PawPrint className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className="font-semibold text-gray-800 truncate">Unknown Client</h4>
+                        <Badge className={statusColors[appointment.status] || statusColors.scheduled}>
+                          {appointment.status?.replace(/_/g, ' ')}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-gray-600 truncate">
+                        <span className="font-medium">{pet?.name || 'Unknown Pet'}</span> - {appointment.reason || appointment.service_type}
+                      </p>
+                      <div className="flex items-center gap-4 text-xs text-gray-500 mt-1">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          {format(new Date(appointment.appointment_date), 'MMM d, yyyy')}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {appointment.appointment_time}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              // Generate URL for appointments list filtered by client
+              const url = createPageUrl(`Appointments?clientId=${client.id}`); // Assumes createPageUrl makes "/appointments?clientId=123"
+
               return (
                 <Link
                   key={appointment.id}
-                  to={createPageUrl(`ClientManagement?clientId=${client?.id}`)}
+                  to={url} // Changed to appointments list
                   className="flex items-center gap-4 p-4 border rounded-lg hover:bg-gray-50 hover:shadow-sm transition-all"
                 >
                   <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">

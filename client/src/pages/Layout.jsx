@@ -178,6 +178,17 @@ export default function Layout({ children, currentPageName }) {
 
   const handleClientFormCancel = () => setShowClientForm(false);
 
+  // New function to close sidebar on mobile after link click
+  const handleNavLinkClick = () => {
+    // Only auto-close on mobile (window width < 1024px, matching lg breakpoint)
+    if (window.innerWidth < 1024) {
+      const trigger = document.querySelector('.sidebar-trigger');
+      if (trigger) {
+        trigger.click(); // Simulate click on trigger to close the sidebar
+      }
+    }
+  };
+
   const GlobalSearchModal = () => (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col">
@@ -317,6 +328,7 @@ export default function Layout({ children, currentPageName }) {
           <Link
             key={item.title}
             to={item.url}
+            onClick={handleNavLinkClick} // Added onClick to auto-close sidebar on mobile
             className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
               location.pathname === item.url.split('?')[0]
                 ? 'bg-blue-100 text-blue-700'
@@ -350,6 +362,7 @@ export default function Layout({ children, currentPageName }) {
               <Link
                 key={item.title}
                 to={item.url}
+                onClick={handleNavLinkClick} // Added onClick to auto-close sidebar on mobile
                 className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                   location.pathname.startsWith(item.url)
                     ? 'bg-purple-100 text-purple-700'
@@ -380,7 +393,7 @@ export default function Layout({ children, currentPageName }) {
               <div className="bg-white border-b border-gray-200 px-6 py-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <SidebarTrigger className="lg:hidden hover:bg-gray-100 p-2 rounded-lg transition-colors duration-200" />
+                    <SidebarTrigger className="sidebar-trigger lg-hidden hover:bg-gray-100 p-2 rounded-lg transition-colors duration-200" /> {/* Added className="sidebar-trigger" */}
                     
                     {/* Main Menu - Action Buttons */}
                     <button
@@ -433,6 +446,7 @@ export default function Layout({ children, currentPageName }) {
                     <Link
                       key={item.title}
                       to={item.url}
+                      onClick={handleNavLinkClick} // Added onClick to auto-close sidebar on mobile
                       className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                         location.pathname === item.url.split('?')[0]
                           ? 'bg-purple-100 text-purple-700'
@@ -454,7 +468,7 @@ export default function Layout({ children, currentPageName }) {
           </Sidebar>
           <main className="flex-1 flex flex-col overflow-hidden">
             <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-              <SidebarTrigger className="lg:hidden" />
+              <SidebarTrigger className="sidebar-trigger lg-hidden" /> {/* Added className="sidebar-trigger" */}
               <h1 className="text-xl font-semibold text-gray-800">{currentPageName === 'MyProfile' ? 'My Profile' : currentPageName}</h1>
             </div>
             <div className="flex-1 overflow-auto bg-gray-50">{children}</div>
@@ -476,4 +490,3 @@ export default function Layout({ children, currentPageName }) {
     </div>
   );
 }
-

@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Save, X } from "lucide-react";
+import { CalendarIcon, Save, X, ArrowLeft } from "lucide-react"; // Added ArrowLeft
 import { format } from "date-fns";
 
 const statuses = [
@@ -53,9 +53,20 @@ export default function BatchForm({ batch, products, onSubmit, onCancel }) {
   };
 
   return (
-    <Card className="max-w-2xl mx-auto">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+    <Card className="max-w-7xl mx-auto w-full">
+      <CardHeader className="relative"> {/* Relative for positioning back button */}
+        {/* Back Arrow Button */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onCancel}
+          className="absolute top-2 left-2 p-0 w-16 h-16 hover:bg-transparent flex items-center justify-center" // Positioned top-left, sized for visibility
+          aria-label="Go back"
+        >
+          <ArrowLeft className="w-12 h-12 text-gray-600 hover:text-blue-800" /> {/* Large icon */}
+        </Button>
+        
+        <CardTitle className="flex items-center justify-center gap-2 text-center">
           <Save className="w-5 h-5" />
           {batch ? 'Edit Batch' : 'Add New Batch'}
         </CardTitle>

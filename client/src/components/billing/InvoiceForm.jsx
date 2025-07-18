@@ -7,9 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
+
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import ProductSearchCombobox from "./ProductSearchCombobox";
-import { FileText, Save, X, Plus, Trash2, Calendar as CalendarIcon, Edit3 } from "lucide-react";
+import { FileText, Save, X, Plus, Trash2, Calendar as CalendarIcon, Edit3,ArrowLeft } from "lucide-react";
 import { format } from "date-fns";
 
 export default function InvoiceForm({ invoice, pets, clients, products, onSubmit, onCancel }) {
@@ -145,7 +146,16 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
   return (
     <Card className="w-full max-w-6xl mx-auto bg-white">
       <CardHeader className="sticky top-0 bg-white z-10 border-b">
-        <CardTitle className="flex items-center gap-2">
+      <Button
+          variant="ghost"
+          size="sm"
+          onClick={onCancel}
+          className="absolute top-2 left-2 p-0 w-16 h-16 hover:bg-transparent flex items-center justify-center" // Positioned top-left, sized for visibility
+          aria-label="Go back"
+        >
+          <ArrowLeft className="w-12 h-12 text-gray-600 hover:text-blue-800" /> {/* Large icon */}
+        </Button>
+        <CardTitle className="flex items-center justify-center gap-2 text-center">
           <FileText className="w-5 h-5" />
           {invoice ? 'Edit Invoice' : 'Create Invoice'}
         </CardTitle>

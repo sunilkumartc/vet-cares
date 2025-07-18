@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Syringe, Plus, Edit, Trash2, Save, X } from "lucide-react";
+import { Syringe, Plus, Edit, Trash2, Save, X, ArrowLeft } from "lucide-react"; // Added ArrowLeft
 import { TenantVaccine } from "@/api/tenant-entities";
 
 const vaccineTypes = ["core", "non_core", "required_by_law"];
@@ -130,9 +130,20 @@ export default function VaccineManagement() {
 
   if (showForm) {
     return (
-      <Card className="max-w-2xl mx-auto">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+      <Card className="max-w-7xl mx-auto w-full">
+        <CardHeader className="relative"> {/* Relative for positioning back button */}
+          {/* Back Arrow Button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleCancel}
+            className="absolute top-2 left-2 p-0 w-16 h-16 hover:bg-transparent flex items-center justify-center" // Positioned top-left, sized for visibility
+            aria-label="Go back"
+          >
+            <ArrowLeft className="w-12 h-12 text-gray-600 hover:text-blue-800" /> {/* Large icon */}
+          </Button>
+          
+          <CardTitle className="flex items-center justify-center gap-2 text-center">
             <Syringe className="w-5 h-5 text-green-600" />
             {editingVaccine ? 'Edit Vaccine' : 'Add New Vaccine'}
           </CardTitle>

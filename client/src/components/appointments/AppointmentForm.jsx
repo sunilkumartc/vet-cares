@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
-import { Calendar as CalendarIcon, Save, X } from "lucide-react";
+import { Calendar as CalendarIcon, Save, X, ArrowLeft } from "lucide-react"; // Added ArrowLeft
 import { format } from "date-fns";
 
 const serviceTypes = ["checkup", "vaccination", "surgery", "emergency", "grooming", "dental", "consultation", "other"];
@@ -54,14 +54,27 @@ export default function AppointmentForm({ appointment, pets, clients, onSubmit, 
   };
 
   return (
-    <Card className="max-w-4xl mx-auto">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+    <Card className="max-w-7xl mx-auto w-full">
+ {/* Ensured full-width on mobile */}
+      <CardHeader className="relative "> {/* Relative for positioning back button */}
+        {/* Back Button at top-left corner */}
+        <Button
+  variant="ghost"
+  size="sm"
+  onClick={onCancel}
+  className="absolute top-2 left-2 p-0 w-16 h-16 hover:bg-transparent flex items-center justify-center" // Increased width/height, added flex for centering
+  aria-label="Go back"
+>
+  <ArrowLeft className="w-12 h-12 text-gray-600 hover:text-blue-800" /> {/* Increased icon size */}
+</Button>
+
+        
+        <CardTitle className="flex items-center justify-center gap-2 text-center">
           <CalendarIcon className="w-5 h-5 text-blue-600" />
           {appointment ? 'Edit Appointment' : 'Schedule New Appointment'}
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-4 sm:p-6"> {/* Responsive padding: smaller on mobile */}
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -98,6 +111,7 @@ export default function AppointmentForm({ appointment, pets, clients, onSubmit, 
                 value={formData.appointment_date}
                 onChange={(e) => handleChange('appointment_date', e.target.value)}
                 required
+                className="w-full" // Full width for responsiveness
               />
             </div>
             <div className="space-y-2">
@@ -108,15 +122,16 @@ export default function AppointmentForm({ appointment, pets, clients, onSubmit, 
                 value={formData.appointment_time}
                 onChange={(e) => handleChange('appointment_time', e.target.value)}
                 required
+                className="w-full"
               />
             </div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-             <div className="space-y-2">
+            <div className="space-y-2">
               <Label htmlFor="service_type">Service Type *</Label>
               <Select onValueChange={(value) => handleChange('service_type', value)} value={formData.service_type} required>
-                <SelectTrigger id="service_type">
+                <SelectTrigger id="service_type" className="w-full">
                   <SelectValue placeholder="Select service" />
                 </SelectTrigger>
                 <SelectContent>
@@ -126,10 +141,10 @@ export default function AppointmentForm({ appointment, pets, clients, onSubmit, 
                 </SelectContent>
               </Select>
             </div>
-             <div className="space-y-2">
+            <div className="space-y-2">
               <Label htmlFor="status">Status *</Label>
               <Select onValueChange={(value) => handleChange('status', value)} value={formData.status} required>
-                <SelectTrigger id="status">
+                <SelectTrigger id="status" className="w-full">
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -148,6 +163,7 @@ export default function AppointmentForm({ appointment, pets, clients, onSubmit, 
               value={formData.reason}
               onChange={(e) => handleChange('reason', e.target.value)}
               placeholder="e.g., Annual checkup, limping, etc."
+              className="w-full"
             />
           </div>
 
@@ -159,17 +175,18 @@ export default function AppointmentForm({ appointment, pets, clients, onSubmit, 
               onChange={(e) => handleChange('notes', e.target.value)}
               placeholder="Any additional notes for this appointment."
               rows={3}
+              className="w-full"
             />
           </div>
           
-          <div className="flex justify-end gap-3 pt-4">
+          <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4"> {/* Stack buttons on mobile */}
             <Button type="button" variant="outline" onClick={onCancel}>
               <X className="w-4 h-4 mr-2" />
               Cancel
             </Button>
             <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
               <Save className="w-4 h-4 mr-2" />
-              {appointment ? 'Update TenantAppointment' : 'Schedule TenantAppointment'}
+              {appointment ? 'Update Appointment' : 'Schedule Appointment'} {/* Fixed typo */}
             </Button>
           </div>
         </form>

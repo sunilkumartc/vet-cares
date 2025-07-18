@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Save, X, Upload, PackagePlus, Calendar as CalendarIcon, Package } from "lucide-react";
+import { Save, X, Upload, PackagePlus, Calendar as CalendarIcon, Package, ArrowLeft } from "lucide-react"; // Added ArrowLeft
 import { UploadFile } from "@/api/integrations";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -115,9 +115,20 @@ export default function ProductForm({ product, onSubmit, onCancel }) {
   };
 
   return (
-    <Card className="max-w-4xl mx-auto">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+    <Card className="w-full max-w-7xl mx-auto">
+      <CardHeader className="relative"> {/* Relative for positioning back button */}
+        {/* Back Arrow Button */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onCancel}
+          className="absolute top-2 left-2 p-0 w-16 h-16 hover:bg-transparent flex items-center justify-center" // Positioned top-left, sized for visibility
+          aria-label="Go back"
+        >
+          <ArrowLeft className="w-12 h-12 text-gray-600 hover:text-blue-800" /> {/* Large icon */}
+        </Button>
+        
+        <CardTitle className="flex items-center justify-center gap-2 text-center">
           <Package className="w-5 h-5" />
           {product ? 'Edit Product' : 'Add New Product'}
         </CardTitle>

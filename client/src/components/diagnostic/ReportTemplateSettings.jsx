@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Settings, Save, X, Plus, Edit, Trash2, Upload } from "lucide-react";
+import { Settings, Save, X, Plus, Edit, Trash2, Upload, ArrowLeft } from "lucide-react"; // Added ArrowLeft
 import { TenantReportTemplate } from "@/api/tenant-entities";
 import { UploadFile } from "@/api/integrations";
 
@@ -223,9 +222,20 @@ export default function ReportTemplateSettings({ templates, onSubmit }) {
           ))}
         </div>
       ) : (
-        <Card className="max-w-4xl mx-auto">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+        <Card className="max-w-7xl mx-auto w-full">
+          <CardHeader className="relative"> {/* Relative for positioning back button */}
+            {/* Back Arrow Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleCancel}
+              className="absolute top-2 left-2 p-0 w-16 h-16 hover:bg-transparent flex items-center justify-center" // Positioned top-left, sized for visibility
+              aria-label="Go back"
+            >
+              <ArrowLeft className="w-12 h-12 text-gray-600 hover:text-blue-800" /> {/* Large icon */}
+            </Button>
+            
+            <CardTitle className="flex items-center justify-center gap-2 text-center">
               <Settings className="w-5 h-5" />
               {selectedTemplate ? 'Edit Template' : 'New Template'}
             </CardTitle>
