@@ -250,8 +250,10 @@ export default function Layout({ children, currentPageName }) {
     return <>{children}</>;
   }
 
-  const adminPages = ['Dashboard', 'Analytics', 'Appointments', 'ClientManagement', 'Clients', 'Pets', 'MedicalRecords', 'Vaccinations', 'Billing', 'StaffManagement', 'PetMedicalHistory', 'InvoiceDetails', 'PetDetails', 'ClientDetails', 'SalesDispense', 'InventoryManagement', 'VaccineSettings', 'DiagnosticReports', 'ReportTemplates', 'Settings'];
+  const adminPages = ['Dashboard', 'Analytics', 'Appointments', 'ClientManagement', 'Clients', 'Pets', 'MedicalRecords', 'Vaccinations', 'Billing', 'StaffManagement', 'PetMedicalHistory', 'InvoiceDetails', 'PetDetails', 'ClientDetails', 'SalesDispense', 'InventoryManagement', 'VaccineSettings', 'DiagnosticReports', 'ReportTemplates', 'Settings', 'TenantManagement'];
+  const clientPages = ['MyPets', 'MyInvoices', 'MyProfile', 'PetProfile', 'PetMedicalHistory'];
   const isAdminPage = adminPages.includes(currentPageName);
+  const isClientPage = clientPages.includes(currentPageName);
 
   if (loading || loggingOut) {
     return (
@@ -262,7 +264,8 @@ export default function Layout({ children, currentPageName }) {
     );
   }
 
-  if (staffSession && isAdminPage) {
+  // Show admin navigation for staff sessions (regardless of page type)
+  if (staffSession) {
     // Use the new permission system
     if (!hasPageAccess(currentPageName)) {
       return (
@@ -430,7 +433,8 @@ export default function Layout({ children, currentPageName }) {
     );
   }
 
-  if (user) {
+  // Show client navigation only for client users (not staff)
+  if (user && !staffSession) {
     return (
       <SidebarProvider>
         <div className="min-h-screen flex w-full bg-gray-50">
