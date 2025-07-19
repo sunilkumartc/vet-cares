@@ -61,6 +61,16 @@ export default function Layout({ children, currentPageName }) {
   const [loggingOut, setLoggingOut] = React.useState(false);
   const [staffSession, setStaffSession] = React.useState(null);
   
+  // Debug logging - moved after state declarations
+  console.log('Layout Debug:', {
+    currentPageName,
+    pathname: location.pathname,
+    hasStaffSession: !!staffSession,
+    hasUser: !!user,
+    staffSessionData: staffSession ? { name: staffSession.name, role: staffSession.role } : null,
+    userData: user ? { name: user.name, email: user.email } : null
+  });
+  
   const [showGlobalSearch, setShowGlobalSearch] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [clients, setClients] = React.useState([]);
@@ -93,14 +103,24 @@ export default function Layout({ children, currentPageName }) {
     const loadUser = async () => {
       try {
         const staffSessionData = localStorage.getItem('staffSession');
+        console.log('Loading sessions - staffSessionData:', staffSessionData ? 'exists' : 'null');
+        
         if (staffSessionData) {
-          setStaffSession(JSON.parse(staffSessionData));
+          const parsedStaffSession = JSON.parse(staffSessionData);
+          console.log('Setting staff session:', parsedStaffSession);
+          setStaffSession(parsedStaffSession);
         } else {
           const clientSessionData = localStorage.getItem('clientSession');
+          console.log('Loading sessions - clientSessionData:', clientSessionData ? 'exists' : 'null');
+          
           if (clientSessionData) {
-            setUser(JSON.parse(clientSessionData));
+            const parsedClientSession = JSON.parse(clientSessionData);
+            console.log('Setting client session:', parsedClientSession);
+            setUser(parsedClientSession);
           } else {
+            console.log('No session data found, trying User.me()');
             const currentUser = await User.me();
+            console.log('User.me() result:', currentUser);
             setUser(currentUser);
           }
         }
