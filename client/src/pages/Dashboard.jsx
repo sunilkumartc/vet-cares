@@ -13,6 +13,8 @@ import StatsCard from "../components/dashboard/StatsCard";
 import RecentAppointments from "../components/dashboard/RecentAppointments";
 import UpcomingVaccinations from "../components/dashboard/UpcomingVaccinations";
 import AppointmentCalendar from "../components/dashboard/AppointmentCalendar";
+import VideoConsultation from '../components/appointments/VideoConsultation';
+import ClientSessionManager from '../lib/clientSession';
 
 export default function Dashboard() {
   const [stats, setStats] = useState({
@@ -92,6 +94,12 @@ export default function Dashboard() {
     }
   };
   
+  // Get current session info
+  const session = ClientSessionManager.getCurrentSession();
+  const tenant_id = session?.tenant_id || ClientSessionManager.getTenantId();
+  const staff_id = session?.staff_id || session?.id || ClientSessionManager.getStaffId();
+  const user_name = session?.full_name || session?.first_name || session?.email;
+
   return (
     <div className="p-4 md:p-8 space-y-8">
       
@@ -218,6 +226,9 @@ export default function Dashboard() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Online Consultation Dashboard */}
+      <VideoConsultation tenantId={tenant_id} staffId={staff_id} />
     </div>
   );
 }

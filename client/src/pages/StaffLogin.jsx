@@ -9,6 +9,7 @@ import { Users, Eye, EyeOff, Heart } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { useTheme } from "@/contexts/ThemeContext";
+import ClientSessionManager from '../lib/clientSession';
 
 export default function StaffLogin() {
   const { getBranding, getTenantInfo } = useTheme();
@@ -52,6 +53,7 @@ export default function StaffLogin() {
       if (response.ok && data.token) {
         const sessionData = {
           id: data.user.id,
+          staff_id: data.user.id, // ensure staff_id is set
           full_name: data.user.name,
           email: data.user.email,
           role: data.user.role,
@@ -62,7 +64,8 @@ export default function StaffLogin() {
         };
 
         console.log("Setting staff session:", sessionData);
-        localStorage.setItem('staffSession', JSON.stringify(sessionData));
+        // Use ClientSessionManager to set session for multi-tenant features
+        ClientSessionManager.createSession(sessionData, data.user.tenant_id);
 
         // Force page reload to ensure layout picks up the session
         setTimeout(() => {

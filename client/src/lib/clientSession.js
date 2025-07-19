@@ -26,10 +26,26 @@ class ClientSessionManager {
     return session?.client_id || session?.id;
   }
 
-  // Get current tenant ID
+  // Set tenant_id in localStorage
+  static setTenantId(tenantId) {
+    if (tenantId) localStorage.setItem('tenant_id', tenantId);
+  }
+
+  // Get tenant_id from localStorage
   static getTenantId() {
     const session = this.getCurrentSession();
-    return session?.tenant_id;
+    return session?.tenant_id || localStorage.getItem('tenant_id');
+  }
+
+  // Set staff_id in localStorage
+  static setStaffId(staffId) {
+    if (staffId) localStorage.setItem('staff_id', staffId);
+  }
+
+  // Get staff_id from localStorage
+  static getStaffId() {
+    const session = this.getCurrentSession();
+    return session?.staff_id || session?.id || localStorage.getItem('staff_id');
   }
 
   // Validate session belongs to current tenant

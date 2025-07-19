@@ -25,6 +25,7 @@ import vetSoapSuggestRoutes from './routes/vet-soap-suggest.js';
 import medicalFilesRoutes from './routes/medical-files.js';
 import clinicProfileRoutes from './routes/clinic-profile.js';
 import otpRoutes from './routes/otp.js';
+import dailyRoutes from './routes/daily.js';
 import { dbUtils } from './lib/mongodb.js';
 import clientsRoute from './routes/clients.js';
 
@@ -83,6 +84,7 @@ app.use('/api', vetSoapSuggestRoutes);
 app.use('/api', medicalFilesRoutes);
 app.use('/api/clinic', clinicProfileRoutes);
 app.use('/api/otp', otpRoutes);
+app.use('/api/daily', dailyRoutes);
 app.use('/api/clients', clientsRoute);
 
 // Health check endpoint
