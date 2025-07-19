@@ -68,7 +68,11 @@ export default function Layout({ children, currentPageName }) {
     hasStaffSession: !!staffSession,
     hasUser: !!user,
     staffSessionData: staffSession ? { name: staffSession.name, role: staffSession.role } : null,
-    userData: user ? { name: user.name, email: user.email } : null
+    userData: user ? { name: user.name, email: user.email } : null,
+    localStorage: {
+      staffSession: localStorage.getItem('staffSession') ? 'exists' : 'null',
+      clientSession: localStorage.getItem('clientSession') ? 'exists' : 'null'
+    }
   });
   
   const [showGlobalSearch, setShowGlobalSearch] = React.useState(false);

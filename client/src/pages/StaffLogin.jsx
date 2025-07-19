@@ -64,7 +64,11 @@ export default function StaffLogin() {
         };
 
         console.log("Setting staff session:", sessionData);
-        // Use ClientSessionManager to set session for multi-tenant features
+        
+        // Set staff session in localStorage (this is what Layout.jsx looks for)
+        localStorage.setItem('staffSession', JSON.stringify(sessionData));
+        
+        // Also set client session for multi-tenant features compatibility
         ClientSessionManager.createSession(sessionData, data.user.tenant_id);
 
         // Force page reload to ensure layout picks up the session
