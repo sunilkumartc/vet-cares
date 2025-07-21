@@ -25,10 +25,9 @@ import ClientSessionManager from "@/lib/clientSession";
 const adminNavigation = [
   { title: "Dashboard", url: createPageUrl("Dashboard"), icon: Heart },
   { title: "Appointments", url: createPageUrl("Appointments"), icon: Calendar },
-  { title: "Clients", url: createPageUrl("Clients"), icon: Users },
-  { title: "Pets", url: createPageUrl("Pets"), icon: PawPrint },
+  { title: "Diagnostic Reports", url: createPageUrl("DiagnosticReports"), icon: FileText },
   { title: "Medical Records", url: createPageUrl("MedicalRecords"), icon: FileText },
-  { title: "Vaccinations", url: createPageUrl("Vaccinations"), icon: Syringe },
+  
   { title: "Sales & Dispense", url: createPageUrl("SalesDispense"), icon: ShoppingCart },
   { title: "Inventory", url: createPageUrl("InventoryManagement"), icon: Package },
   { title: "Billing", url: createPageUrl("Billing"), icon: CreditCard },
@@ -39,7 +38,9 @@ const adminNavigation = [
 
 const settingsNavigation = [
   { title: "Clinic Profile", url: createPageUrl("Settings"), icon: Settings },
-  { title: "Diagnostic Reports", url: createPageUrl("DiagnosticReports"), icon: FileText },
+ 
+  { title: "Client Management", url: createPageUrl("Clients"), icon: Users },
+  { title: "Pet Management", url: createPageUrl("Pets"), icon: PawPrint },
   { title: "Vaccine Settings", url: createPageUrl("VaccineSettings"), icon: Syringe },
   { title: "Report Templates", url: createPageUrl("ReportTemplates"), icon: FileSliders },
 ];

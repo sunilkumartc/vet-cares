@@ -11,8 +11,10 @@ import { format } from "date-fns";
 import { UploadFile } from "@/api/integrations"; // Kept existing import
 import { generatePetId } from "@/api/functions"; // Added new import
 
+
 const speciesOptions = ["dog", "cat", "bird", "rabbit", "hamster", "fish", "reptile", "other"];
-const genderOptions = ["male", "female", "unknown"];
+const genderOptions = ["male", "female", "Male Neutered","Female Spayed","unknown"];
+
 
 export default function PetForm({ pet, clients, onSubmit, onCancel }) {
   const getInitialFormData = () => ({
@@ -31,12 +33,15 @@ export default function PetForm({ pet, clients, onSubmit, onCancel }) {
     special_notes: pet?.special_notes || ""
   });
 
+
   const [formData, setFormData] = useState(getInitialFormData());
   const [generatingId, setGeneratingId] = useState(false); // Added state for ID generation
+
 
   useEffect(() => {
     setFormData(getInitialFormData());
   }, [pet]);
+
 
   // Auto-generate TenantPet ID when species changes (only for new pets)
   useEffect(() => {
@@ -45,8 +50,18 @@ export default function PetForm({ pet, clients, onSubmit, onCancel }) {
     }
   }, [formData.species, pet]); // Depend on formData.species and pet prop
 
+  // New useEffect: Auto-select single client if only one option
+  useEffect(() => {
+    if (!pet && !formData.client_id && clients.length === 1) { // Only for new pets, if no client selected, and exactly one client
+      const singleClientId = clients[0].id; // Assuming 'id' is the field; adjust if it's '_id'
+      handleChange('client_id', singleClientId); // Auto-set the client_id
+    }
+  }, [clients, formData.client_id, pet]); // Depend on clients, current client_id, and pet prop
+
+
   const generateNewPetId = async (species) => {
     if (!species) return;
+
 
     setGeneratingId(true);
     try {
@@ -56,6 +71,7 @@ export default function PetForm({ pet, clients, onSubmit, onCancel }) {
       // const response = { data: { pet_id: `${species.substring(0,1).toUpperCase()}${Math.floor(Math.random() * 900) + 100}` } };
       // Replace with actual call if `generatePetId` is an API integration:
       const response = await generatePetId({ species }); // Assuming generatePetId returns { data: { pet_id: '...' } }
+
 
       if (response.data && response.data.pet_id) {
         setFormData(prev => ({ ...prev, pet_id: response.data.pet_id }));
@@ -69,9 +85,11 @@ export default function PetForm({ pet, clients, onSubmit, onCancel }) {
     }
   };
 
+
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
+
 
   const handleSpeciesChange = (species) => {
     setFormData(prev => ({ ...prev, species }));
@@ -80,6 +98,7 @@ export default function PetForm({ pet, clients, onSubmit, onCancel }) {
       generateNewPetId(species);
     }
   };
+
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -91,10 +110,12 @@ export default function PetForm({ pet, clients, onSubmit, onCancel }) {
     onSubmit(submitData);
   };
 
+
   const getClientName = (clientId) => {
     const client = clients.find(c => c.id === clientId);
     return client ? `${client.first_name} ${client.last_name}` : '';
   };
+
 
   return (
     <Card className="max-w-7xl mx-auto w-full">
@@ -160,6 +181,7 @@ export default function PetForm({ pet, clients, onSubmit, onCancel }) {
             </div>
           </div>
 
+
           {/* Basic Information (now name and species) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -183,6 +205,7 @@ export default function PetForm({ pet, clients, onSubmit, onCancel }) {
             </div>
           </div>
 
+
           {/* Breed and Color (now in a separate 2-column grid) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -204,6 +227,7 @@ export default function PetForm({ pet, clients, onSubmit, onCancel }) {
               />
             </div>
           </div>
+
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
@@ -244,6 +268,7 @@ export default function PetForm({ pet, clients, onSubmit, onCancel }) {
             </div>
           </div>
 
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="microchip_id">Microchip ID</Label>
@@ -266,9 +291,11 @@ export default function PetForm({ pet, clients, onSubmit, onCancel }) {
             </div>
           </div>
 
+
           {/* Medical Information */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Medical Information</h3>
+
 
             <div className="space-y-2">
               <Label htmlFor="allergies">Known Allergies</Label>
@@ -279,6 +306,7 @@ export default function PetForm({ pet, clients, onSubmit, onCancel }) {
                 placeholder="e.g., Chicken, Pollen, None known"
               />
             </div>
+
 
             <div className="space-y-2">
               <Label htmlFor="special_notes">Special Care Notes</Label>
@@ -291,6 +319,7 @@ export default function PetForm({ pet, clients, onSubmit, onCancel }) {
               />
             </div>
           </div>
+
 
           <div className="flex justify-end gap-3 pt-4">
             <Button type="button" variant="outline" onClick={onCancel}>

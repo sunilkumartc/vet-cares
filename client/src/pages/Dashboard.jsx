@@ -187,46 +187,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-blue-600" />
-            Quick Actions
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Link to={createPageUrl("Clients")}>
-              <Button variant="outline" className="w-full justify-start gap-2 h-auto py-4">
-                <Users className="w-5 h-5" />
-                <div className="text-left">
-                  <div className="font-medium">Add New Client</div>
-                  <div className="text-sm text-gray-500">Register a new pet owner</div>
-                </div>
-              </Button>
-            </Link>
-            <Link to={createPageUrl("Pets")}>
-              <Button variant="outline" className="w-full justify-start gap-2 h-auto py-4">
-                <PawPrint className="w-5 h-5" />
-                <div className="text-left">
-                  <div className="font-medium">Register Pet</div>
-                  <div className="text-sm text-gray-500">Add a new pet profile</div>
-                </div>
-              </Button>
-            </Link>
-            <Link to={createPageUrl("Billing")}>
-              <Button variant="outline" className="w-full justify-start gap-2 h-auto py-4">
-                <DollarSign className="w-5 h-5" />
-                <div className="text-left">
-                  <div className="font-medium">Create Invoice</div>
-                  <div className="text-sm text-gray-500">Generate a new bill</div>
-                </div>
-              </Button>
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
-
+      
       {/* Online Consultation Dashboard */}
       <VideoConsultation tenantId={tenant_id} staffId={staff_id} />
     </div>

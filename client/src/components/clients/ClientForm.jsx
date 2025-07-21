@@ -32,7 +32,7 @@ export default function ClientForm({ client, onSubmit, onCancel }) {
   };
 
   return (
-    <Card className="max-w-7xl mx-auto w-full">
+    <Card className="max-w-2xl mx-auto w-full">
       <CardHeader className="relative"> {/* Relative for positioning back button */}
         {/* Back Arrow Button */}
         <Button

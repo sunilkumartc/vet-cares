@@ -86,6 +86,17 @@ export default function ClientManagement() {
   const [vitalResolution, setVitalResolution] = useState('day');
   const [viewingMedicalRecord, setViewingMedicalRecord] = useState(null);
 
+  // Product cache for quick lookups
+  const productIndex = React.useMemo(() => {
+    const m = new Map();
+    for (const p of products) {
+      if (p.id) m.set(String(p.id), p);
+      if (p._id) m.set(String(p._id), p);
+      if (p.product_id) m.set(String(p.product_id), p);
+    }
+    return m;
+  }, [products]);
+
   useEffect(() => {
     loadAllData();
   }, []);
@@ -145,8 +156,6 @@ export default function ClientManagement() {
     }
   }, [selectedClient, selectedPetId, medicalRecords, vaccinations, clientInvoices, clientMemos, pets, isFullScreen]); // Added isFullScreen to trigger when view changes
 
-
-
   const handlePetSelect = (petId) => {
     // Toggle selection: if the same pet is clicked again, show all. Otherwise, select the pet.
     setSelectedPetId(currentId => (currentId === petId ? null : petId));
@@ -192,8 +201,6 @@ export default function ClientManagement() {
       setLoading(false);
     }
   };
-
-
 
   const handleFormSubmit = async (formData, formType) => {
     try {
@@ -256,123 +263,193 @@ export default function ClientManagement() {
   };
 
   const handleCreateInvoice = (petId = null) => {
-    setEditingInvoice({
-      client_id: selectedClient._id || selectedClient.id,
-      pet_id: petId,
-      items: [{ product_id: '', service: '', description: '', quantity: 1, unit_price: 0, total: 0, is_manual: false }],
-      status: 'draft',
-      invoice_date: new Date().toISOString().split('T')[0],
-      due_date: addDays(new Date(), 30).toISOString().split('T')[0],
-      tax_rate: 8,
-    });
+    setEditingInvoice(null); // Set to null for create mode
     setShowInvoiceForm(true);
   };
 
-  const checkStockForInvoice = async (invoiceData) => {
-    for (const item of invoiceData.items) {
-      if (item.product_id) { // Only check stock for actual products from inventory
-        const product = products.find(p => p.id === item.product_id);
-        if (!product || product.total_stock < item.quantity) {
-          return { sufficient: false, productName: product?.name || 'Unknown TenantProduct' };
-        }
+  const normalizeId = (v) => {
+    if (!v) return undefined;
+    if (typeof v === "string" || typeof v === "number") return String(v);
+    if (typeof v === "object") {
+      return String(v._id ?? v.id ?? v.product_id ?? v.value ?? "");
+    }
+    return undefined;
+  };
+
+  const getProductSafe = async (productId) => {
+    try {
+      return await ApiProduct.get(productId);
+    } catch {
+      return null;
+    }
+  };
+
+  const checkStockForInvoice = async (items) => {
+    if (!Array.isArray(items) || items.length === 0) return { sufficient: true };
+    for (const item of items) {
+      const productId = normalizeId(item.product_id || item.product);
+      if (!productId) continue;
+      const cached = productIndex.get(productId);
+      const product = cached || (await getProductSafe(productId));
+      if (!product) {
+        return { sufficient: false, productName: "Unknown Product" };
+      }
+      if ((Number(product.total_stock) || 0) < (Number(item.quantity) || 0)) {
+        return { sufficient: false, productName: product.name };
       }
     }
     return { sufficient: true };
   };
 
-  const deductStockForInvoice = async (invoice) => {
+  const deductStockForInvoice = async (invoice, submittedItems) => {
     const staffMember = "Staff"; // Placeholder for logged-in user
+    const errors = [];
+    const items = Array.isArray(submittedItems) ? submittedItems : invoice.items || [];
 
-    for (const item of invoice.items) {
-      if (item.product_id) {
-        let quantityToDeduct = item.quantity;
-        const product = products.find(p => p.id === item.product_id);
-        if (!product) continue;
+    for (const item of items) {
+      const productId = normalizeId(item.product_id || item.product);
+      const qtyNeeded = Number(item.quantity) || 0;
+      if (!productId || qtyNeeded <= 0) continue;
 
-        const batches = await TenantProductBatch.filter(
-          { product_id: item.product_id, status: 'active' },
-          'expiry_date'
-        );
+      let product = productIndex.get(productId) || (await getProductSafe(productId));
+      if (!product) {
+        errors.push(`Missing product (${productId}).`);
+        continue;
+      }
 
-        // Sort batches by expiry date to use oldest stock first (FIFO-like)
-        batches.sort((a, b) => new Date(a.expiry_date) - new Date(b.expiry_date));
+      let remaining = qtyNeeded;
+      let batches = [];
+      try {
+        batches = await ApiProductBatch.filter({ product_id: productId, status: "active" }, "expiry_date");
+      } catch {
+        batches = [];
+      }
 
-        for (const batch of batches) {
-          if (quantityToDeduct <= 0) break;
-
-          const quantityFromThisBatch = Math.min(quantityToDeduct, batch.quantity_on_hand);
-
-          if (quantityFromThisBatch > 0) {
-            const newBatchQuantity = batch.quantity_on_hand - quantityFromThisBatch;
-            const newProductStock = product.total_stock - quantityFromThisBatch;
-
-            await TenantProductBatch.update(batch.id, {
-              quantity_on_hand: newBatchQuantity,
-              status: newBatchQuantity === 0 ? 'depleted' : 'active'
-            });
-
-            await TenantProduct.update(product.id, { total_stock: newProductStock });
-
-            await TenantStockMovement.create({
-              product_id: item.product_id,
-              batch_id: batch.id,
-              movement_type: 'sale',
-              quantity: -quantityFromThisBatch,
-              reference_id: invoice.id,
-              movement_date: new Date().toISOString(),
-              staff_member: staffMember,
-              previous_stock: product.total_stock + quantityFromThisBatch, // Correct previous stock for the product
-              new_stock: newProductStock
-            });
-
-            quantityToDeduct -= quantityFromThisBatch;
-            // Update products state immediately to reflect the deduction
-            setProducts(prevProducts => prevProducts.map(p =>
-              p.id === product.id ? { ...p, total_stock: newProductStock } : p
-            ));
-          }
+      if (!batches || batches.length === 0) {
+        const newStock = Math.max(0, (Number(product.total_stock) || 0) - remaining);
+        try {
+          await ApiProduct.update(product.id ?? product._id, { total_stock: newStock });
+          product.total_stock = newStock;
+        } catch {
+          errors.push(`Stock update failed for ${product.name}`);
         }
+        try {
+          await ApiStockMovement.create({
+            product_id: productId,
+            batch_id: null,
+            movement_type: "sale",
+            quantity: -remaining,
+            reference_id: invoice.id ?? invoice._id,
+            movement_date: new Date().toISOString(),
+            staff_member: staffMember,
+            previous_stock: (Number(product.total_stock) || 0) + remaining,
+            new_stock: product.total_stock,
+          });
+        } catch {}
+        continue;
+      }
+
+      for (const batch of batches) {
+        if (remaining <= 0) break;
+        const avail = Number(batch.quantity_on_hand) || 0;
+        if (avail <= 0) continue;
+        const take = Math.min(avail, remaining);
+        const newBatchQty = avail - take;
+
+        try {
+          await ApiProductBatch.update(batch.id ?? batch._id, {
+            quantity_on_hand: newBatchQty,
+            status: newBatchQty === 0 ? "depleted" : batch.status,
+          });
+        } catch {
+          errors.push(`Batch update failed (${batch.batch_id})`);
+          continue;
+        }
+
+        const newProdStock = Math.max(0, (Number(product.total_stock) || 0) - take);
+        try {
+          await ApiProduct.update(product.id ?? product._id, { total_stock: newProdStock });
+          product.total_stock = newProdStock;
+        } catch {
+          errors.push(`Product stock update failed (${product.name})`);
+        }
+
+        try {
+          await ApiStockMovement.create({
+            product_id: productId,
+            batch_id: batch.id ?? batch._id,
+            movement_type: "sale",
+            quantity: -take,
+            reference_id: invoice.id ?? invoice._id,
+            movement_date: new Date().toISOString(),
+            staff_member: staffMember,
+            previous_stock: (Number(product.total_stock) || 0) + take,
+            new_stock: product.total_stock,
+          });
+        } catch {}
+
+        remaining -= take;
+      }
+
+      if (remaining > 0) {
+        errors.push(`Not enough stock deducted for ${product.name} (short ${remaining}).`);
       }
     }
+
+    return errors;
   };
 
   const handleInvoiceSubmit = async (invoiceData) => {
-    setLoading(true);
     try {
-      const isNewInvoice = !editingInvoice?.id; // Check if editingInvoice exists and has an ID
-      const isBecomingPaid = invoiceData.status === 'paid' && editingInvoice?.status !== 'paid';
+      const isNewInvoice = !editingInvoice;
+      const wasPaidBefore = editingInvoice?.status === "paid";
+      const willBePaid = invoiceData.status === "paid";
+      const isBecomingPaid = willBePaid && !wasPaidBefore;
+
+      const submittedItems = Array.isArray(invoiceData.items) ? invoiceData.items : [];
 
       if (isBecomingPaid) {
-        const stockCheck = await checkStockForInvoice(invoiceData);
+        const stockCheck = await checkStockForInvoice(submittedItems);
         if (!stockCheck.sufficient) {
-          alert(`Insufficient stock for "${stockCheck.productName}". Cannot complete sale. Please adjust inventory or invoice items.`);
-          setLoading(false);
+          alert(`Insufficient stock for "${stockCheck.productName}". Cannot complete sale.`);
           return;
         }
       }
 
       let savedInvoice;
-      if (isNewInvoice) {
-        savedInvoice = await TenantInvoice.create(invoiceData);
-      } else {
-        savedInvoice = await TenantInvoice.update(editingInvoice.id, invoiceData);
+      try {
+        if (editingInvoice) {
+          savedInvoice = await ApiInvoice.update(editingInvoice._id || editingInvoice.id, invoiceData);
+        } else {
+          savedInvoice = await ApiInvoice.create(invoiceData);
+        }
+      } catch (err) {
+        console.error("[ClientManagement] Invoice save failed:", err);
+        alert("Failed to save invoice. Please try again.");
+        return;
       }
 
       if (isBecomingPaid) {
-        await deductStockForInvoice(savedInvoice);
+        const stockErrors = await deductStockForInvoice(savedInvoice, submittedItems);
+        if (stockErrors.length > 0) {
+          alert(`Invoice saved, but inventory updates failed:\n- ${stockErrors.join("\n- ")}`);
+        }
       }
 
       setShowInvoiceForm(false);
       setEditingInvoice(null);
-      await loadSelectedClientSpecificData(selectedClient.id); // Reload specific client data including invoices and products
+      await loadSelectedClientSpecificData(selectedClient._id || selectedClient.id); // Reload specific client data including invoices and products
       alert("Invoice saved successfully!");
     } catch (error) {
-      console.error("Error saving invoice:", error);
-      alert("Failed to save invoice: " + error.message);
-    } finally {
-      setLoading(false);
+      console.error("[ClientManagement] Unexpected error:", error);
+      alert("Something went wrong. Please try again.");
     }
   };
+
+  // const handleCreateInvoice = (petId = null) => {
+  //   setEditingInvoice(null); // Set to null for create mode
+  //   setShowInvoiceForm(true);
+  // };
 
   const handleAddToBillSubmit = async (itemData) => { // Renamed from handleAddToBill
     const { client, pet } = billingTarget;
@@ -425,7 +502,6 @@ export default function ClientManagement() {
         const taxRate = 8; // Default tax rate for new invoices
         const tax = subtotal * (taxRate / 100);
         const total = subtotal + tax;
-
         await ApiInvoice.create({
             client_id: client.id,
             pet_id: pet.id,
@@ -750,7 +826,6 @@ export default function ClientManagement() {
                   </Card>
                 );
               })}
-
               {/* Add New Pet Card */}
               <Card className="border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors cursor-pointer" onClick={() => { setSelectedPetId(null); setShowForm('pet'); setEditingRecord(null); }}>
                 <CardContent className="flex flex-col items-center justify-center h-full text-gray-500 hover:text-blue-600">
@@ -760,7 +835,6 @@ export default function ClientManagement() {
               </Card>
             </div>
           </div>
-
           {/* Action Buttons Bar */}
           <div className="bg-white border-b px-6 py-3">
             <div className="flex items-center gap-2 flex-wrap">
@@ -1054,7 +1128,7 @@ export default function ClientManagement() {
                 <TabsContent value="billing" className="space-y-4 mt-6">
                   {displayedInvoices.length === 0 ? (
                     <div className="text-center py-12 text-gray-500">
-                      <CreditCard className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                      <CreditCard className="w-12 h-12 mx-auto mb-4 text-gray-300" resten />
                       <p>No billing records found</p>
                     </div>
                   ) : (
@@ -1155,7 +1229,6 @@ export default function ClientManagement() {
                           />
                         </div>
                       </div>
-
                       {/* Vital Charts Grid */}
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <Card>

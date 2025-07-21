@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,11 +11,16 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import ProductSearchCombobox from "./ProductSearchCombobox";
 import { FileText, Save, X, Plus, Trash2, Calendar as CalendarIcon, Edit3,ArrowLeft } from "lucide-react";
 import { format } from "date-fns";
+import { TenantInvoice } from "@/api/tenant-entities"; // Adjust path if needed
+
+
 
 export default function InvoiceForm({ invoice, pets, clients, products, onSubmit, onCancel }) {
   const generateInvoiceNumber = () => {
     return `INV-${Date.now()}`;
   };
+
+
 
   const getInitialFormData = () => ({
     invoice_number: invoice?.invoice_number || generateInvoiceNumber(),
@@ -34,13 +38,19 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
     notes: invoice?.notes || ""
   });
 
+
+
   const [formData, setFormData] = useState(getInitialFormData());
   const [availablePets, setAvailablePets] = useState([]);
+
+
 
   useEffect(() => {
     // Reset form data if invoice prop changes (e.g., editing a different invoice)
     setFormData(getInitialFormData());
   }, [invoice, pets]);
+
+
 
   useEffect(() => {
     // Filter pets based on selected client
@@ -55,23 +65,33 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
     }
   }, [formData.client_id, pets]);
 
+
+
   useEffect(() => {
     // Recalculate totals whenever items or tax rate change
     calculateTotals();
   }, [formData.items, formData.tax_rate]);
 
+
+
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
+
+
 
   const handleClientChange = (clientId) => {
     // When client changes, clear pet selection and then set the new client ID
     setFormData(prev => ({ ...prev, client_id: clientId, pet_id: "" }));
   };
 
+
+
   const updateItem = (index, field, value) => {
     const newItems = [...formData.items];
     let currentItem = newItems[index];
+
+
 
     if (field === 'product_id') {
       const product = products.find(p => (p._id || p.id) === value);
@@ -104,12 +124,16 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
       currentItem[field] = value;
     }
 
+
+
     // Recalculate item total
     currentItem.total = (currentItem.quantity || 0) * (currentItem.unit_price || 0);
     newItems[index] = currentItem;
     
     setFormData(prev => ({ ...prev, items: newItems }));
   };
+
+
 
   const addItem = () => {
     setFormData(prev => ({
@@ -118,6 +142,8 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
     }));
   };
 
+
+
   const removeItem = (index) => {
     setFormData(prev => ({
       ...prev,
@@ -125,10 +151,14 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
     }));
   };
 
+
+
   const calculateTotals = () => {
     const subtotal = formData.items.reduce((sum, item) => sum + (item.total || 0), 0);
     const taxAmount = subtotal * (formData.tax_rate / 100);
     const totalAmount = subtotal + taxAmount;
+
+
 
     setFormData(prev => ({
       ...prev,
@@ -138,10 +168,14 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
     }));
   };
 
+
+
   const handleSubmit = (e) => {
     e.preventDefault();
     onSubmit(formData);
   };
+
+
 
   return (
     <Card className="w-full max-w-6xl mx-auto bg-white">
@@ -157,7 +191,7 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
         </Button>
         <CardTitle className="flex items-center justify-center gap-2 text-center">
           <FileText className="w-5 h-5" />
-          {invoice ? 'Edit Invoice' : 'Create Invoice'}
+          {invoice?.id ? 'Edit Invoice' : 'Create Invoice'} {/* Fixed: Check invoice?.id to determine mode */}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -173,6 +207,8 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
                 placeholder="Auto-generated if empty"
               />
             </div>
+
+
 
             <div className="space-y-2">
               <Label htmlFor="client_id">Client *</Label>
@@ -192,6 +228,8 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
                 </SelectContent>
               </Select>
             </div>
+
+
 
             <div className="space-y-2">
               <Label htmlFor="pet_id">Pet *</Label>
@@ -213,6 +251,8 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
               </Select>
             </div>
           </div>
+
+
 
           {/* Invoice Date Only */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -237,6 +277,8 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
             </div>
           </div>
 
+
+
           {/* Invoice Items - Responsive */}
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -246,6 +288,8 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
                 Add Item
               </Button>
             </div>
+
+
 
             {formData.items.map((item, index) => (
               <Card key={index} className="p-4">
@@ -271,6 +315,8 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
                     </span>
                   </div>
 
+
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4 items-end">
                     {/* Product/Service Name */}
                     <div className="lg:col-span-2 space-y-2">
@@ -295,6 +341,8 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
                       )}
                     </div>
 
+
+
                     {/* Description */}
                     <div className="space-y-2">
                       <Label>Description</Label>
@@ -304,6 +352,8 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
                         onChange={(e) => updateItem(index, 'description', e.target.value)}
                       />
                     </div>
+
+
 
                     {/* Quantity */}
                     <div className="space-y-2">
@@ -317,6 +367,8 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
                         required
                       />
                     </div>
+
+
 
                     {/* Unit Price */}
                     <div className="space-y-2">
@@ -332,6 +384,8 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
                         required
                       />
                     </div>
+
+
 
                     {/* Total and Remove Button */}
                     <div className="flex flex-col justify-end gap-2">
@@ -354,6 +408,8 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
               </Card>
             ))}
           </div>
+
+
 
           {/* Invoice Totals & Other Details - Responsive */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
@@ -378,6 +434,8 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
                   </Select>
                 </div>
 
+
+
                 <div className="space-y-2">
                   <Label htmlFor="payment_method">Payment Method</Label>
                   <Select
@@ -398,6 +456,8 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
                   </Select>
                 </div>
               </div>
+
+
 
               {formData.status === 'paid' && (
                 <div className="space-y-2">
@@ -421,6 +481,8 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
                 </div>
               )}
 
+
+
               <div className="space-y-2">
                 <Label htmlFor="notes">Notes</Label>
                 <Textarea
@@ -432,6 +494,8 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
                 />
               </div>
             </div>
+
+
 
             <div className="space-y-4">
               <Card className="p-4 bg-gray-50">
@@ -466,6 +530,8 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
             </div>
           </div>
 
+
+
           {/* Action Buttons - Responsive */}
           <div className="flex flex-col sm:flex-row justify-end gap-3 pt-6 border-t sticky bottom-0 bg-white">
             <Button type="button" variant="outline" onClick={onCancel} className="w-full sm:w-auto">
@@ -474,7 +540,7 @@ export default function InvoiceForm({ invoice, pets, clients, products, onSubmit
             </Button>
             <Button type="submit" className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
               <Save className="w-4 h-4 mr-2" />
-              {invoice ? 'Update Invoice' : 'Create Invoice'}
+              {invoice?.id ? 'Update Invoice' : 'Create Invoice'} {/* Fixed: Check invoice?.id to determine button text */}
             </Button>
           </div>
         </form>
