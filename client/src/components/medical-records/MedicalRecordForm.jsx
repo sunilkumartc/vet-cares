@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,15 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import VetSoapTextarea from "@/components/ui/vet-soap-textarea";
-import { FileText, Save, X, PlusCircle, Trash2, Upload, FileIcon, Image, TestTube2, CalendarIcon, PawPrint, Thermometer, HeartPulse, Wind, Droplets } from "lucide-react";
+import { FileText, Save, X, PlusCircle, Trash2, Upload, FileIcon, Image, TestTube2, CalendarIcon, PawPrint, Thermometer, HeartPulse, Wind, Droplets, Eye } from "lucide-react";
 import { UploadFile } from "@/api/integrations";
-import { Combobox } from "@/components/ui/combobox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import DocumentViewer from "./DocumentViewer";
-import MedicalFileUpload from "./MedicalFileUpload";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // Helper component for displaying vitals summary
@@ -94,7 +91,7 @@ export default function MedicalRecordForm({ record, pets, clients, veterinarians
 
   const [formData, setFormData] = useState(getInitialFormData());
   const [availablePets, setAvailablePets] = useState([]);
-  const [uploading, setUploading] = useState(false);
+  const [uploading, setUploading] = useState({ lab_reports: false, radiology_reports: false, other_attachments: false });
   const [viewerOpen, setViewerOpen] = useState(false);
   const [currentFile, setCurrentFile] = useState({ url: '', name: '', type: '' });
   const [activeTab, setActiveTab] = useState("subjective");
@@ -179,6 +176,51 @@ export default function MedicalRecordForm({ record, pets, clients, veterinarians
     setViewerOpen(true);
   };
 
+  const handleFileUpload = async (event, category) => {
+    const file = event.target.files[0];
+    if (!file) {
+      alert('No file selected. Please choose a file to upload.');
+      return;
+    }
+
+    setUploading(prev => ({ ...prev, [category]: true }));
+    try {
+      const uploadFormData = new FormData();
+      uploadFormData.append('file', file);
+      uploadFormData.append('fileName', file.name);
+      uploadFormData.append('contentType', file.type || 'application/octet-stream');
+
+      const response = await UploadFile(uploadFormData);
+      console.log('UploadFile response:', response);
+
+      const file_url = response?.url;
+
+      if (!file_url) {
+        throw new Error('No URL returned from upload - verify backend response includes "url" property');
+      }
+
+      console.log('Extracted file URL:', file_url);
+
+      // Add the new file URL to the category's array
+      setFormData(prev => ({
+        ...prev,
+        [category]: [...(prev[category] || []), file_url]
+      }));
+    } catch (error) {
+      console.error(`Error uploading file for ${category}:`, error);
+      alert(`Failed to upload file: ${error.message || 'Please check file type/size and try again.'}`);
+    } finally {
+      setUploading(prev => ({ ...prev, [category]: false }));
+    }
+  };
+
+  const removeFile = (category, index) => {
+    setFormData(prev => ({
+      ...prev,
+      [category]: prev[category].filter((_, i) => i !== index)
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -232,26 +274,73 @@ export default function MedicalRecordForm({ record, pets, clients, veterinarians
         const result = await response.json();
         console.log('✅ SOAP note indexed for suggestions:', result.message);
       } else {
-        console.warn('⚠️  Failed to index SOAP note for suggestions');
+        console.warn('⚠️ Failed to index SOAP note for suggestions');
       }
     } catch (error) {
-      console.warn('⚠️  Error indexing SOAP note:', error);
+      console.warn('⚠️ Error indexing SOAP note:', error);
       // Don't fail the form submission if indexing fails
     }
   };
 
   const FileUploadSection = ({ category, title, icon: Icon }) => (
     <div className="space-y-2 rounded-lg border p-4">
-      <MedicalFileUpload
-        category={category}
-        title={title}
-        icon={Icon}
-        onFilesChange={(files) => handleChange(category, files)}
-        existingFiles={formData[category] || []}
-        maxFiles={10}
-        maxSizeMB={15}
-        onViewFile={handleFileView}
-      />
+      <div className="flex items-center justify-between">
+        <Label className="flex items-center gap-2 font-semibold">
+          <Icon className="w-5 h-5" />
+          {title}
+        </Label>
+        <div className="flex items-center gap-2">
+          <input
+            type="file"
+            onChange={(e) => handleFileUpload(e, category)}
+            className="hidden"
+            id={`file-upload-${category}`}
+            accept="*/*" // Adjust accept based on category if needed
+          />
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => document.getElementById(`file-upload-${category}`).click()}
+            disabled={uploading[category]}
+            className="gap-2"
+          >
+            <Upload className="w-4 h-4" />
+            {uploading[category] ? 'Uploading...' : 'Upload File'}
+          </Button>
+        </div>
+      </div>
+      {formData[category]?.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          {formData[category].map((fileUrl, index) => (
+            <div key={index} className="relative border rounded-lg p-2">
+              <div className="flex items-center gap-2">
+                <FileIcon className="w-6 h-6 text-blue-600" />
+                <span className="truncate">{fileUrl.split('/').pop()}</span>
+              </div>
+              <div className="absolute top-1 right-1 flex gap-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleFileView(fileUrl, fileUrl.split('/').pop(), fileUrl.split('.').pop())}
+                  className="bg-white/80 hover:bg-white"
+                >
+                  <Eye className="w-4 h-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeFile(category, index)}
+                  className="bg-white/80 hover:bg-white text-red-600 hover:text-red-700"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 
@@ -496,8 +585,8 @@ export default function MedicalRecordForm({ record, pets, clients, veterinarians
               </TabsContent>
             </Tabs>
             <div className="flex justify-end gap-3 pt-6 mt-4 border-t">
-              <Button type="button" variant="outline" onClick={onCancel} disabled={uploading}><X className="w-4 h-4 mr-2" /> Cancel</Button>
-              <Button type="submit" className="bg-blue-600 hover:bg-blue-700" disabled={uploading}><Save className="w-4 h-4 mr-2" /> {uploading ? 'Uploading...' : (record ? 'Update Record' : 'Save Record')}</Button>
+              <Button type="button" variant="outline" onClick={onCancel} disabled={Object.values(uploading).some(v => v)}><X className="w-4 h-4 mr-2" /> Cancel</Button>
+              <Button type="submit" className="bg-blue-600 hover:bg-blue-700" disabled={Object.values(uploading).some(v => v)}><Save className="w-4 h-4 mr-2" /> {Object.values(uploading).some(v => v) ? 'Uploading...' : (record ? 'Update Record' : 'Save Record')}</Button>
             </div>
           </form>
         </CardContent>

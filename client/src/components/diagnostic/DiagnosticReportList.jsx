@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,10 +8,12 @@ import { format } from "date-fns";
 import jsPDF from "jspdf";
 import DocumentViewer from "../medical-records/DocumentViewer";
 
+
 const statusColors = {
   draft: "bg-gray-100 text-gray-800",
   completed: "bg-green-100 text-green-800"
 };
+
 
 const typeColors = {
   cytology: "bg-red-100 text-red-800",
@@ -22,14 +23,17 @@ const typeColors = {
   other: "bg-gray-100 text-gray-800"
 };
 
+
 export default function DiagnosticReportList({ reports, pets, clients, templates, loading, onEdit }) {
   const [viewerState, setViewerState] = useState({ isOpen: false, fileUrl: '', fileName: '' });
   const [isLoadingPdf, setIsLoadingPdf] = useState(null);
+
 
   // Helper functions to get full pet/client/template objects
   const getPetInfo = (petId) => pets.find(p => (p._id || p.id) === petId);
   const getClientInfo = (clientId) => clients.find(c => (c._id || c.id) === clientId);
   const getTemplateInfo = (templateId) => templates?.find(t => (t._id || t.id) === templateId);
+
 
   const getImageAsBase64 = async (url) => {
     try {
@@ -48,6 +52,21 @@ export default function DiagnosticReportList({ reports, pets, clients, templates
     }
   };
 
+
+  // New helper function to safely format dates
+  const safeFormatDate = (dateString, formatString = 'dd/MM/yyyy') => {
+    if (!dateString) return 'N/A';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Invalid Date'; // Check for invalid date
+      return format(date, formatString);
+    } catch (error) {
+      console.error('Date formatting error:', error);
+      return 'Invalid Date';
+    }
+  };
+
+
   const generatePdfForReport = async (report) => {
     const pet = getPetInfo(report.pet_id);
     const client = getClientInfo(report.client_id);
@@ -58,6 +77,7 @@ export default function DiagnosticReportList({ reports, pets, clients, templates
     const pageHeight = doc.internal.pageSize.height;
     const pageWidth = doc.internal.pageSize.width;
     const margin = 15;
+
 
     // --- Header ---
     if (template?.logo_url) {
@@ -74,10 +94,12 @@ export default function DiagnosticReportList({ reports, pets, clients, templates
     doc.text(template?.clinic_address || 'No. 32, 4th temple Street road, Malleshwaram, Bengaluru', pageWidth - margin, y + 10, { align: 'right' });
     doc.text(template?.clinic_phone || '082961 43115', pageWidth - margin, y + 15, { align: 'right' });
 
+
     y += 30;
     doc.setDrawColor(200, 200, 200);
     doc.line(margin, y, pageWidth - margin, y); // Header line
     y += 10;
+
 
     // --- Report Title ---
     doc.setFontSize(16);
@@ -100,12 +122,15 @@ export default function DiagnosticReportList({ reports, pets, clients, templates
     }
     doc.text(`AGE / SEX: ${ageText}`, margin, y + 18);
 
+
     doc.text(`SITE: ${report.specimen_site?.toUpperCase() || 'N/A'}`, pageWidth / 2 + 10, y);
-    doc.text(`COLLECTION DATE: ${report.collection_date ? format(new Date(report.collection_date), 'dd/MM/yyyy') : 'N/A'}`, pageWidth / 2 + 10, y + 6);
-    doc.text(`REPORT DATE: ${report.report_date ? format(new Date(report.report_date), 'dd/MM/yyyy') : 'N/A'}`, pageWidth / 2 + 10, y + 12);
+    doc.text(`COLLECTION DATE: ${safeFormatDate(report.collection_date)}`, pageWidth / 2 + 10, y + 6);
+    doc.text(`REPORT DATE: ${safeFormatDate(report.report_date)}`, pageWidth / 2 + 10, y + 12);
     doc.text(`REF. BY: DR. ${report.referred_by?.toUpperCase() || 'N/A'}`, pageWidth / 2 + 10, y + 18);
 
+
     y += 30; // Move y past the patient info section
+
 
     // --- Observations ---
     doc.setFontSize(12);
@@ -128,6 +153,7 @@ export default function DiagnosticReportList({ reports, pets, clients, templates
     }
     y += 10; // Space after observations
 
+
     // --- Images ---
     if (report.images && report.images.length > 0) {
         if (y > pageHeight - 90) { // New page if content exceeds height (90 for image height + buffer)
@@ -148,6 +174,7 @@ export default function DiagnosticReportList({ reports, pets, clients, templates
         }
     }
 
+
     // --- Footer and Signatures ---
     const addFooter = async (docInstance) => {
         const footerY = pageHeight - 35;
@@ -160,11 +187,13 @@ export default function DiagnosticReportList({ reports, pets, clients, templates
         docInstance.text(template?.clinic_email || 'contact@drraviportal.com', pageWidth / 2, footerY + 20, { align: 'center' });
     };
 
+
     const signatureY = pageHeight - 70; // Fixed Y position for signatures towards the bottom
     if (y > signatureY - 20) { // If current content 'y' is too close to signature area
       doc.addPage();
       y = margin; // Reset y for new page
     }
+
 
     // Signatures
     if (template?.signature_fields && template.signature_fields.length > 0) {
@@ -175,8 +204,8 @@ export default function DiagnosticReportList({ reports, pets, clients, templates
                 // Not enough horizontal space, move to next line or new page if absolutely needed
                 // For now, assume sufficient horizontal space for a few signatures
                 // Or, wrap signatures if more than 2-3
-                // For simplicity as per outline, just place them side by side
             }
+
 
             // Add signature image if available
             if (sig.signature_image_url) {
@@ -197,6 +226,7 @@ export default function DiagnosticReportList({ reports, pets, clients, templates
         }
     }
 
+
     // Add footer to all pages after all content is laid out
     const pageCount = doc.internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
@@ -204,8 +234,10 @@ export default function DiagnosticReportList({ reports, pets, clients, templates
         await addFooter(doc);
     }
 
+
     return doc;
   };
+
 
   const handleDownloadPDF = async (report) => {
     setIsLoadingPdf(report._id || report.id);
@@ -219,6 +251,7 @@ export default function DiagnosticReportList({ reports, pets, clients, templates
       setIsLoadingPdf(null);
     }
   };
+
 
   const handleViewPDF = async (report) => {
     setIsLoadingPdf(report._id || report.id);
@@ -238,10 +271,12 @@ export default function DiagnosticReportList({ reports, pets, clients, templates
     }
   };
 
+
   const closeViewer = () => {
     // bloburl created by jspdf does not need explicit revocation like URL.createObjectURL
     setViewerState({ isOpen: false, fileUrl: '', fileName: '' });
   };
+
 
   if (loading) {
     return (
@@ -269,6 +304,7 @@ export default function DiagnosticReportList({ reports, pets, clients, templates
     );
   }
 
+
   if (reports.length === 0) {
     return (
       <div className="text-center py-12">
@@ -278,6 +314,7 @@ export default function DiagnosticReportList({ reports, pets, clients, templates
       </div>
     );
   }
+
 
   return (
     <>
@@ -320,7 +357,7 @@ export default function DiagnosticReportList({ reports, pets, clients, templates
                         )}
                         <div className="flex items-center gap-1">
                           <Calendar className="w-4 h-4" />
-                          <span>{format(new Date(report.report_date), 'dd/MM/yyyy')}</span>
+                          <span>{safeFormatDate(report.report_date)}</span> {/* Use safeFormatDate */}
                         </div>
                         {report.images && report.images.length > 0 && (
                           <div className="flex items-center gap-1">

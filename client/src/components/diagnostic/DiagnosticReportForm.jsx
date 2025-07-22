@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { FileText, Save, X, Calendar as CalendarIcon, Upload, Eye, Trash2, ArrowLeft } from "lucide-react"; // Added ArrowLeft
+import { FileText, Save, X, Calendar as CalendarIcon, Upload, Eye, Trash2, ArrowLeft, ImageOff } from "lucide-react";
 import { format } from "date-fns";
 import { UploadFile } from "@/api/integrations";
 
@@ -36,6 +36,9 @@ export default function DiagnosticReportForm({ report, pets, clients, templates,
   const [availablePets, setAvailablePets] = useState([]);
   const [availableTemplates, setAvailableTemplates] = useState([]);
   const [uploading, setUploading] = useState(false);
+
+  // Use the actual tenant ID from your query/logs
+  // const tenantId = '68750e8e354bae6f5030bfa9';
 
   useEffect(() => {
     setFormData(getInitialFormData());
@@ -78,18 +81,43 @@ export default function DiagnosticReportForm({ report, pets, clients, templates,
 
   const handleImageUpload = async (event) => {
     const file = event.target.files[0];
-    if (!file) return;
+    if (!file) {
+      alert('No file selected. Please choose an image to upload.');
+      return;
+    }
+
+    console.log('Selected file:', {
+      name: file.name,
+      type: file.type,
+      size: file.size
+    });
 
     setUploading(true);
     try {
-      const { file_url } = await UploadFile({ file });
+      const uploadFormData = new FormData();
+      uploadFormData.append('file', file);
+      uploadFormData.append('fileName', file.name);
+      uploadFormData.append('contentType', file.type || 'application/octet-stream');
+      // uploadFormData.append('tenant_id', tenantId);
+
+      const response = await UploadFile(uploadFormData);
+      console.log('UploadFile response:', response);
+
+      const file_url = response?.url;
+
+      if (!file_url) {
+        throw new Error('No URL returned from upload - verify backend response includes "url" property');
+      }
+
+      console.log('Extracted image URL:', file_url);
+
       setFormData(prev => ({
         ...prev,
         images: [...prev.images, file_url]
       }));
     } catch (error) {
       console.error('Error uploading image:', error);
-      alert('Failed to upload image. Please try again.');
+      alert(`Failed to upload image: ${error.message || 'Please check file type/size and try again.'}`);
     } finally {
       setUploading(false);
     }
@@ -109,16 +137,15 @@ export default function DiagnosticReportForm({ report, pets, clients, templates,
 
   return (
     <Card className="w-full max-w-7xl mx-auto">
-      <CardHeader className="relative"> {/* Relative for positioning back button */}
-        {/* Back Arrow Button */}
+      <CardHeader className="relative">
         <Button
           variant="ghost"
           size="sm"
           onClick={onCancel}
-          className="absolute top-2 left-2 p-0 w-16 h-16 hover:bg-transparent flex items-center justify-center" // Positioned top-left, sized for visibility
+          className="absolute top-2 left-2 p-0 w-16 h-16 hover:bg-transparent flex items-center justify-center"
           aria-label="Go back"
         >
-          <ArrowLeft className="w-12 h-12 text-gray-600 hover:text-blue-800" /> {/* Large icon */}
+          <ArrowLeft className="w-12 h-12 text-gray-600 hover:text-blue-800" />
         </Button>
         
         <CardTitle className="flex items-center justify-center gap-2 text-center">
@@ -240,7 +267,7 @@ export default function DiagnosticReportForm({ report, pets, clients, templates,
                 </PopoverContent>
               </Popover>
             </div>
-             <div className="space-y-2">
+            <div className="space-y-2">
               <Label>Collection Date *</Label>
               <Popover>
                 <PopoverTrigger asChild>
@@ -281,7 +308,6 @@ export default function DiagnosticReportForm({ report, pets, clients, templates,
               />
             </div>
           </div>
-
 
           <div className="space-y-2">
             <Label htmlFor="observations">Observations *</Label>
@@ -326,14 +352,20 @@ export default function DiagnosticReportForm({ report, pets, clients, templates,
                     <img 
                       src={image} 
                       alt={`Diagnostic image ${index + 1}`}
-                      className="w-full h-32 object-cover rounded"
+                      className="w-full h-32 object-cover rounded cursor-pointer"
+                      onClick={() => image && window.open(image, '_blank')}
+                      onError={(e) => {
+                        console.error('Failed to load image:', image);
+                        e.target.src = 'https://via.placeholder.com/150?text=Image+Not+Found';
+                      }}
+                      loading="lazy"
                     />
                     <div className="absolute top-1 right-1 flex gap-1">
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        onClick={() => window.open(image, '_blank')}
+                        onClick={() => image && window.open(image, '_blank')}
                         className="bg-white/80 hover:bg-white"
                       >
                         <Eye className="w-4 h-4" />

@@ -1,6 +1,7 @@
 // Mock integrations - replace with actual implementations as needed
 // These were previously provided by Base44 SDK
 
+
 export const Core = {
   InvokeLLM: async (prompt, options = {}) => {
     console.log('Mock LLM invocation:', { prompt, options });
@@ -19,16 +20,23 @@ export const Core = {
     };
   },
   
-  UploadFile: async (file, options = {}) => {
-    console.log('AWS S3 file upload:', { fileName: file.name, fileSize: file.size, options });
+  UploadFile: async (formData) => { // Accept formData directly
+    console.log('Starting S3 upload...');
     
     try {
-      // Create FormData for file upload
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('fileName', file.name);
-      formData.append('contentType', file.type || 'application/octet-stream');
+      // Extract from formData for logging
+      const file = formData.get('file');
+      const fileName = formData.get('fileName');
+      const contentType = formData.get('contentType');
+      const tenantId = formData.get('tenant_id') || 'general'; // Default to 'general' if missing
       
+      console.log('Upload details:', {
+        fileName,
+        contentType,
+        tenantId,
+        fileSize: file ? file.size : 'No file'
+      });
+
       // Upload via backend API
       const response = await fetch('/api/upload-to-s3', {
         method: 'POST',
@@ -52,7 +60,7 @@ export const Core = {
       
       return {
         fileId: result.fileName,
-        url: result.url,
+        url: result.url, // Ensure this is the full public URL
         size: result.size,
         bucket: result.bucket,
         isPublic: result.isPublic
@@ -85,14 +93,9 @@ export const Core = {
   }
 };
 
+
 export const InvokeLLM = Core.InvokeLLM;
 export const SendEmail = Core.SendEmail;
 export const UploadFile = Core.UploadFile;
 export const GenerateImage = Core.GenerateImage;
 export const ExtractDataFromUploadedFile = Core.ExtractDataFromUploadedFile;
-
-
-
-
-
-
