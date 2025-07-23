@@ -9,6 +9,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ApiClient_entity as ApiClient, ApiPet, ApiMedicalRecord, ApiVaccination, ApiInvoice, ApiMemo, ApiProduct, ApiProductBatch, ApiStockMovement, ApiStaff } from "@/api/apiClient";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 import ClientForm from "../components/clients/ClientForm";
 import PetForm from "../components/pets/PetForm";
@@ -86,6 +90,12 @@ export default function ClientManagement() {
   const [vitalResolution, setVitalResolution] = useState('day');
   const [viewingMedicalRecord, setViewingMedicalRecord] = useState(null);
 
+  // Follow-up modal state
+  const [showFollowupModal, setShowFollowupModal] = useState(false);
+  const [activeRecordId, setActiveRecordId] = useState(null);
+  const [followupDate, setFollowupDate] = useState("");
+  const [followupNotes, setFollowupNotes] = useState("");
+
   // Product cache for quick lookups
   const productIndex = React.useMemo(() => {
     const m = new Map();
@@ -96,6 +106,8 @@ export default function ClientManagement() {
     }
     return m;
   }, [products]);
+
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     loadAllData();
@@ -154,7 +166,7 @@ export default function ClientManagement() {
       });
       setDisplayedHistory(filteredHistory);
     }
-  }, [selectedClient, selectedPetId, medicalRecords, vaccinations, clientInvoices, clientMemos, pets, isFullScreen]); // Added isFullScreen to trigger when view changes
+  }, [selectedClient, selectedPetId, medicalRecords, vaccinations, clientInvoices, clientMemos, pets, isFullScreen, refreshKey]); // Added isFullScreen to trigger when view changes
 
   const handlePetSelect = (petId) => {
     // Toggle selection: if the same pet is clicked again, show all. Otherwise, select the pet.
@@ -584,6 +596,43 @@ export default function ClientManagement() {
     return [...records, ...vaccines, ...clientMemos].sort((a, b) => new Date(b.date) - new Date(a.date));
   };
 
+  // --- Follow-up logic ---
+  const openFollowupModal = (recordId) => {
+    setActiveRecordId(recordId);
+    setFollowupDate("");
+    setFollowupNotes("");
+    setShowFollowupModal(true);
+  };
+  const closeFollowupModal = () => {
+    setShowFollowupModal(false);
+    setActiveRecordId(null);
+    setFollowupDate("");
+    setFollowupNotes("");
+  };
+  const handleFollowupSubmit = (e) => {
+    e.preventDefault();
+    if (!followupDate) return;
+    setMedicalRecords(prev => prev.map(r => {
+      if (r.id === activeRecordId) {
+        const followups = Array.isArray(r.followups) ? r.followups : [];
+        return {
+          ...r,
+          followups: [
+            ...followups,
+            {
+              id: `fu_${Date.now()}`,
+              date: followupDate,
+              notes: followupNotes,
+            }
+          ]
+        };
+      }
+      return r;
+    }));
+    setRefreshKey(k => k + 1);
+    closeFollowupModal();
+  };
+
   if (clientId && !selectedClient) {
     return (
       <div className="w-full h-full flex items-center justify-center p-8">
@@ -917,8 +966,16 @@ export default function ClientManagement() {
                         const pet = pets.find(p => p.id === event.pet_id);
 
                         if (event.type === 'medical') {
+                          // Find the soonest follow-up date
+                          let nextFollowup = null;
+                          if (Array.isArray(event.followups) && event.followups.length > 0) {
+                            nextFollowup = event.followups.reduce((soonest, curr) => {
+                              if (!soonest) return curr;
+                              return new Date(curr.date) < new Date(soonest.date) ? curr : soonest;
+                            }, null);
+                          }
                           return (
-                            <TimelineEvent key={`hist-med-${event.id}`} date={event.date} icon={FileText} color="blue" title={`Medical Visit for ${pet?.name}`}>
+                            <TimelineEvent key={`hist-med-${event.id}`} date={event.date} icon={FileText} color="blue" title={`Medical Visit for ${pet?.name}`}> 
                               <div>
                                 <h4 className="font-semibold mb-1">Subjective</h4>
                                 <p className="text-sm text-gray-600">{event.subjective}</p>
@@ -935,7 +992,31 @@ export default function ClientManagement() {
                                 <Button variant="outline" size="sm" onClick={() => setViewingMedicalRecord(event)}>
                                   View & Print Prescription
                                 </Button>
+                                <Button variant="outline" size="sm" onClick={() => openFollowupModal(event.id)}>
+                                  <PlusCircle className="w-4 h-4 mr-1" /> Add Follow-up
+                                </Button>
                               </div>
+                              {/* Show 'Next Follow-up: Not scheduled' only if no follow-ups exist */}
+                              {(!Array.isArray(event.followups) || event.followups.length === 0) && (
+                                <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded px-3 py-2 mt-3 mb-2 w-fit">
+                                  <Calendar className="w-4 h-4 text-blue-600" />
+                                  <span className="font-medium text-blue-800">Next Follow-up:</span>
+                                  <span className="text-blue-700 font-semibold">Not scheduled</span>
+                                </div>
+                              )}
+                              {/* Show follow-ups if any */}
+                              {Array.isArray(event.followups) && event.followups.length > 0 && (
+                                <div className="pl-4 mt-2 border-l-2 border-blue-200 space-y-2">
+                                  {event.followups.map(fu => (
+                                    <div key={fu.id} className="bg-blue-50 rounded p-3">
+                                      <div className="flex items-center gap-2 text-blue-700 font-semibold">
+                                        <Calendar className="w-3 h-3" /> {format(new Date(fu.date), "dd MMM yyyy")}
+                                      </div>
+                                      <div className="text-sm text-gray-700 mt-1">{fu.notes}</div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             </TimelineEvent>
                           );
                         }
@@ -1326,6 +1407,47 @@ export default function ClientManagement() {
           clients={clients}
           staff={staff}
         />
+        {/* Follow-up Modal */}
+        <Dialog open={showFollowupModal} onOpenChange={setShowFollowupModal}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add Follow-up</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleFollowupSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Follow-up Date *</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className={`w-full px-3 py-2 border rounded text-left text-sm ${followupDate ? 'text-gray-900' : 'text-gray-400'} bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                    >
+                      {followupDate ? format(new Date(followupDate), 'dd MMM yyyy') : 'Select date'}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <CalendarPicker
+                      mode="single"
+                      selected={followupDate ? new Date(followupDate) : undefined}
+                      onSelect={date => {
+                        setFollowupDate(date ? date.toISOString().split('T')[0] : "");
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Notes</label>
+                <Textarea value={followupNotes} onChange={e => setFollowupNotes(e.target.value)} rows={3} placeholder="Enter follow-up notes..." />
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={closeFollowupModal}>Cancel</Button>
+                <Button type="submit" disabled={!followupDate}>Save Follow-up</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }

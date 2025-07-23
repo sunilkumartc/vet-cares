@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { FileText, PawPrint, Calendar, Stethoscope, Pill } from "lucide-react";
+import { FileText, PawPrint, Calendar, Stethoscope, Pill, PlusCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TenantClient, TenantPet, TenantMedicalRecord } from "@/api/tenant-entities";
@@ -7,11 +7,21 @@ import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import ClientAuthGuard from "@/components/ClientAuthGuard";
 import ClientSessionManager from "@/lib/clientSession";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 
 export default function MedicalHistory() {
   const [medicalRecords, setMedicalRecords] = useState([]);
   const [pets, setPets] = useState([]);
   const [loading, setLoading] = useState(true);
+  // Follow-up modal state
+  const [showFollowupModal, setShowFollowupModal] = useState(false);
+  const [activeRecordId, setActiveRecordId] = useState(null);
+  const [followupDate, setFollowupDate] = useState("");
+  const [followupNotes, setFollowupNotes] = useState("");
 
   useEffect(() => {
     loadMedicalData();
@@ -26,11 +36,9 @@ export default function MedicalHistory() {
       }
 
       const clientId = ClientSessionManager.getClientId();
-      
       // Load client-specific data
       const myPets = await TenantPet.filter({ client_id: clientId });
       setPets(myPets);
-
       if (myPets.length > 0) {
         const petIds = myPets.map(p => p.id);
         const records = await TenantMedicalRecord.list();
@@ -47,6 +55,42 @@ export default function MedicalHistory() {
   };
 
   const getPetInfo = (petId) => pets.find(p => p.id === petId);
+
+  // --- Follow-up logic ---
+  const openFollowupModal = (recordId) => {
+    setActiveRecordId(recordId);
+    setFollowupDate("");
+    setFollowupNotes("");
+    setShowFollowupModal(true);
+  };
+  const closeFollowupModal = () => {
+    setShowFollowupModal(false);
+    setActiveRecordId(null);
+    setFollowupDate("");
+    setFollowupNotes("");
+  };
+  const handleFollowupSubmit = (e) => {
+    e.preventDefault();
+    if (!followupDate) return;
+    setMedicalRecords(prev => prev.map(r => {
+      if (r.id === activeRecordId) {
+        const followups = Array.isArray(r.followups) ? r.followups : [];
+        return {
+          ...r,
+          followups: [
+            ...followups,
+            {
+              id: `fu_${Date.now()}`,
+              date: followupDate,
+              notes: followupNotes,
+            }
+          ]
+        };
+      }
+      return r;
+    }));
+    closeFollowupModal();
+  };
 
   if (loading) {
     return (
@@ -125,6 +169,25 @@ export default function MedicalHistory() {
                           <strong>Notes from Dr. {record.veterinarian || 'Vet'}:</strong> {record.notes}
                       </div>
                     )}
+                    {/* Add Follow-up Button */}
+                    <div className="flex gap-2 pt-2">
+                      <Button size="sm" variant="outline" onClick={() => openFollowupModal(record.id)}>
+                        <PlusCircle className="w-4 h-4 mr-1" /> Add Follow-up
+                      </Button>
+                    </div>
+                    {/* Show follow-ups if any */}
+                    {Array.isArray(record.followups) && record.followups.length > 0 && (
+                      <div className="pl-4 mt-2 border-l-2 border-blue-200 space-y-2">
+                        {record.followups.map(fu => (
+                          <div key={fu.id} className="bg-blue-50 rounded p-3">
+                            <div className="flex items-center gap-2 text-blue-700 font-semibold">
+                              <Calendar className="w-3 h-3" /> {format(new Date(fu.date), "dd MMM yyyy")}
+                            </div>
+                            <div className="text-sm text-gray-700 mt-1">{fu.notes}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               );
@@ -132,6 +195,34 @@ export default function MedicalHistory() {
           </div>
         )}
       </div>
+
+      {/* Follow-up Modal */}
+      <Dialog open={showFollowupModal} onOpenChange={setShowFollowupModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Follow-up</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleFollowupSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Follow-up Date *</label>
+              <CalendarPicker
+                mode="single"
+                selected={followupDate ? new Date(followupDate) : undefined}
+                onSelect={date => setFollowupDate(date ? date.toISOString().split('T')[0] : "")}
+                initialFocus
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Notes</label>
+              <Textarea value={followupNotes} onChange={e => setFollowupNotes(e.target.value)} rows={3} placeholder="Enter follow-up notes..." />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={closeFollowupModal}>Cancel</Button>
+              <Button type="submit" disabled={!followupDate}>Save Follow-up</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
     </ClientAuthGuard>
   );
