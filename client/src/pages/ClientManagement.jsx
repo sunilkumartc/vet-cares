@@ -617,6 +617,11 @@ export default function ClientManagement() {
         date: followupDate,
         notes: followupNotes,
       });
+      // Fetch the updated record
+      const updatedRecord = await ApiMedicalRecord.get(activeRecordId);
+      setMedicalRecords(prev =>
+        prev.map(r => r.id === activeRecordId ? { ...r, followups: updatedRecord.followups || [] } : r)
+      );
       setRefreshKey(k => k + 1); // To trigger UI refresh
       closeFollowupModal();
     } catch (error) {
