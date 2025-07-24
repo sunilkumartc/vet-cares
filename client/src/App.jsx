@@ -10,6 +10,7 @@ function App() {
   // Check if we're on the main domain (not a subdomain)
   const isMainDomain = window.location.hostname === 'vetvault.in' || 
                       window.location.hostname === 'www.vetvault.in' ||
+                      window.location.hostname === 'localhost' || 
                       window.location.hostname.includes('vercel.app');
 
   if (isMainDomain) {

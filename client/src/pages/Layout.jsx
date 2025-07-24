@@ -26,7 +26,7 @@ const adminNavigation = [
   { title: "Dashboard", url: createPageUrl("Dashboard"), icon: Heart },
   { title: "Appointments", url: createPageUrl("Appointments"), icon: Calendar },
   { title: "Diagnostic Reports", url: createPageUrl("DiagnosticReports"), icon: FileText },
-  { title: "Medical Records", url: createPageUrl("MedicalRecords"), icon: FileText },
+  // { title: "Medical Records", url: createPageUrl("MedicalRecords"), icon: FileText },
   
   { title: "Sales & Dispense", url: createPageUrl("SalesDispense"), icon: ShoppingCart },
   { title: "Inventory", url: createPageUrl("InventoryManagement"), icon: Package },

@@ -46,18 +46,22 @@ async function sendWelcomeEmail({ to, name, tenantName, welcomeMessage, bookingU
 router.post('/', async (req, res) => {
   try {
     const { first_name, last_name, email, phone, address, sendWelcomeMail, tenant_id } = req.body;
-    if (!first_name || !last_name || !email || !phone || !tenant_id) {
-      return res.status(400).json({ error: 'Missing required fields' });
+
+    // Validate required fields (email & last_name are optional)
+    if (!first_name || !phone || !tenant_id) {
+      return res.status(400).json({ error: 'Missing required fields (first_name, phone, or tenant_id)' });
     }
+
     const client = new MongoClient(process.env.MONGODB_URI);
     await client.connect();
     const db = client.db('vet-cares');
     const clientsCollection = db.collection('clients');
     const tenantsCollection = db.collection('tenants');
+
     const newClient = {
       first_name,
-      last_name,
-      email,
+      last_name: last_name || '',   // Default empty if not provided
+      email: email || '',           // Default empty if not provided
       phone,
       address: address || '',
       tenant_id,
@@ -66,9 +70,11 @@ router.post('/', async (req, res) => {
       updated_at: new Date(),
       profile_completed: false
     };
+
     const result = await clientsCollection.insertOne(newClient);
-    if (sendWelcomeMail) {
-      // Fetch tenant info for custom welcome message
+
+    // Send welcome email only if email exists and sendWelcomeMail is true
+    if (sendWelcomeMail && email) {
       let tenantName = 'VetVault';
       let welcomeMessage = '';
       let bookingUrl = '';
@@ -81,9 +87,12 @@ router.post('/', async (req, res) => {
             bookingUrl = `https://${tenant.subdomain}.vetvault.in`;
           }
         }
-      } catch (e) { /* fallback to defaults */ }
+      } catch (e) {
+        console.warn('Tenant lookup failed:', e);
+      }
       await sendWelcomeEmail({ to: email, name: first_name, tenantName, welcomeMessage, bookingUrl });
     }
+
     await client.close();
     res.json({ success: true, client_id: result.insertedId });
   } catch (error) {
@@ -91,5 +100,6 @@ router.post('/', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
 
 export default router; 
