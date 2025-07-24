@@ -28,6 +28,8 @@ import otpRoutes from './routes/otp.js';
 import dailyRoutes from './routes/daily.js';
 import { dbUtils } from './lib/mongodb.js';
 import clientsRoute from './routes/clients.js';
+import medicalRecordsRoutes from './routes/medical-records.js';
+import mongodbManager from './lib/mongodb.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -86,6 +88,7 @@ app.use('/api/clinic', clinicProfileRoutes);
 app.use('/api/otp', otpRoutes);
 app.use('/api/daily', dailyRoutes);
 app.use('/api/clients', clientsRoute);
+app.use('/api/medical_records', medicalRecordsRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
@@ -123,6 +126,7 @@ async function connectDB() {
   try {
     await dbUtils.connect();
     console.log('Connected to MongoDB');
+    app.locals.db = mongodbManager.db;
   } catch (error) {
     console.error('MongoDB connection failed:', error);
   }

@@ -260,4 +260,14 @@ export const ApiStockMovement = new BaseApiEntity('stock_movements', apiClient);
 export const ApiVaccine = new BaseApiEntity('vaccines', apiClient);
 export const ApiDiagnosticReport = new BaseApiEntity('diagnostic_reports', apiClient);
 export const ApiReportTemplate = new BaseApiEntity('report_templates', apiClient);
+export const ApiMedicalRecordFollowup = {
+  // Add a follow-up
+  async add(recordId, followup) {
+    return apiClient.post(`/medical_records/${recordId}/followups`, followup);
+  },
+  // Get all follow-ups for a record
+  async list(recordId) {
+    return apiClient.get(`/medical_records/${recordId}/followups`);
+  }
+};
  

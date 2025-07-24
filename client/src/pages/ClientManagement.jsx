@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ApiClient_entity as ApiClient, ApiPet, ApiMedicalRecord, ApiVaccination, ApiInvoice, ApiMemo, ApiProduct, ApiProductBatch, ApiStockMovement, ApiStaff } from "@/api/apiClient";
+import { ApiClient_entity as ApiClient, ApiPet, ApiMedicalRecord, ApiVaccination, ApiInvoice, ApiMemo, ApiProduct, ApiProductBatch, ApiStockMovement, ApiStaff, ApiMedicalRecordFollowup } from "@/api/apiClient";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -609,28 +609,19 @@ export default function ClientManagement() {
     setFollowupDate("");
     setFollowupNotes("");
   };
-  const handleFollowupSubmit = (e) => {
+  const handleFollowupSubmit = async (e) => {
     e.preventDefault();
     if (!followupDate) return;
-    setMedicalRecords(prev => prev.map(r => {
-      if (r.id === activeRecordId) {
-        const followups = Array.isArray(r.followups) ? r.followups : [];
-        return {
-          ...r,
-          followups: [
-            ...followups,
-            {
-              id: `fu_${Date.now()}`,
-              date: followupDate,
-              notes: followupNotes,
-            }
-          ]
-        };
-      }
-      return r;
-    }));
-    setRefreshKey(k => k + 1);
-    closeFollowupModal();
+    try {
+      await ApiMedicalRecordFollowup.add(activeRecordId, {
+        date: followupDate,
+        notes: followupNotes,
+      });
+      setRefreshKey(k => k + 1); // To trigger UI refresh
+      closeFollowupModal();
+    } catch (error) {
+      alert("Failed to add follow-up. Please try again.");
+    }
   };
 
   if (clientId && !selectedClient) {
