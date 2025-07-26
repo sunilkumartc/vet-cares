@@ -692,7 +692,7 @@ export default function ClientManagement() {
       <div className="fixed inset-0 bg-white z-40 flex">
         <div className="flex-1 flex flex-col">
           {/* Top Header - TenantClient Info Bar */}
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-4">
+          <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-1">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <Button
@@ -728,15 +728,7 @@ export default function ClientManagement() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleCloseClient} // Changed to navigate to dashboard
-                  className="bg-white/10 text-white border-white/30 hover:bg-white/25 transition-colors"
-                >
-                  <ArrowRight className="w-4 h-4 mr-2" />
-                  Back to Dashboard
-                </Button>
+               
                 <Button
                   variant="outline"
                   size="sm"
@@ -760,115 +752,123 @@ export default function ClientManagement() {
                 const overdueVaccinations = petVaccinations.filter(v => new Date(v.next_due_date) < new Date());
 
                 return (
-                  <Card 
-                    key={pet._id || pet.id} 
-                    onClick={() => handlePetSelect(pet._id || pet.id)}
-                                          className={`cursor-pointer hover:shadow-lg transition-all duration-300 border-2 ${
-                          selectedPetId === (pet._id || pet.id) ? 'border-blue-500 shadow-xl bg-blue-50' : 'hover:border-blue-300 bg-white'
-                      }`}
-                  >
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center overflow-hidden">
-                            {pet.photo_url ? (
-                              <img src={pet.photo_url} alt={pet.name} className="w-full h-full object-cover" />
-                            ) : (
-                              <PawPrint className="w-6 h-6 text-white" />
-                            )}
-                          </div>
-                          <div>
-                            {pet.pet_id && (
-                              <div className="text-xs font-mono text-blue-600 bg-blue-50 px-2 py-1 rounded mb-1">
-                                ID: {pet.pet_id}
-                              </div>
-                            )}
-                            <CardTitle className="text-lg font-bold text-gray-900">
-                              {pet.name}
-                            </CardTitle>
-                            <div className="text-sm text-gray-600 capitalize">
-                              {pet.species} • {pet.breed || 'Mixed'}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => { 
-                              e.stopPropagation(); 
-                              setShowForm('pet'); 
-                              setEditingRecord(pet); 
-                            }}
-                            className="px-2"
-                          >
-                            <Edit className="w-3 h-3" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="bg-blue-50 text-blue-700 hover:bg-blue-100 px-2"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleAddMedicalRecord(pet.id);
-                            }}
-                          >
-                            <FileText className="w-3 h-3" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="bg-purple-50 text-purple-700 hover:bg-purple-100 px-2"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleAddVaccination(pet.id);
-                            }}
-                          >
-                            <Syringe className="w-3 h-3" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="bg-green-50 text-green-700 hover:bg-green-100 px-2"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setBillingTarget({ client: selectedClient, pet: pet });
-                              setShowAddToBillForm(true);
-                            }}
-                          >
-                            <DollarSign className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                      <div className="space-y-2 text-xs">
-                        {pet.birth_date && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">Age:</span>
-                            <span>{getPreciseAge(pet.birth_date)}</span>
-                          </div>
-                        )}
-                        {pet.weight && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">Weight:</span>
-                            <span>{pet.weight} kg</span>
-                          </div>
-                        )}
-                        {recentRecord && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">Last Visit:</span>
-                            <span>{format(new Date(recentRecord.visit_date), 'dd-MM-yyyy')}</span>
-                          </div>
-                        )}
-                        {overdueVaccinations.length > 0 && (
-                          <Badge variant="destructive" className="text-xs">
-                            {overdueVaccinations.length} Overdue Vaccine{overdueVaccinations.length > 1 ? 's' : ''}
-                          </Badge>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
+<Card 
+  key={pet._id || pet.id} 
+  onClick={() => handlePetSelect(pet._id || pet.id)}
+  className={`cursor-pointer transition-all duration-300 border rounded-md px-2 py-1 ${
+    selectedPetId === (pet._id || pet.id) 
+      ? 'border-blue-500 shadow bg-blue-50' 
+      : 'hover:border-blue-300 bg-white'
+  }`}
+>
+  <CardHeader className="p-0 mb-1">
+    <div className="flex items-center justify-between gap-2">
+      {/* Avatar + Basic Info */}
+      <div className="flex items-center gap-2">
+        <div className="w-9 h-9 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center overflow-hidden">
+          {pet.photo_url ? (
+            <img src={pet.photo_url} alt={pet.name} className="w-full h-full object-cover" />
+          ) : (
+            <PawPrint className="w-4 h-4 text-white" />
+          )}
+        </div>
+        <div className="leading-tight">
+          {pet.pet_id && (
+            <div className="text-[10px] font-mono text-blue-600 bg-blue-50 px-1 py-[1px] rounded mb-[2px] w-fit">
+              ID: {pet.pet_id}
+            </div>
+          )}
+          <CardTitle className="text-sm font-semibold text-gray-900">{pet.name}</CardTitle>
+          <div className="text-[11px] text-gray-600 capitalize">
+            {pet.species} • {pet.breed || 'Mixed'}
+          </div>
+        </div>
+      </div>
+
+      {/* Action Icons (horizontal) */}
+      <div className="flex gap-3">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={(e) => { 
+            e.stopPropagation(); 
+            setShowForm('pet'); 
+            setEditingRecord(pet); 
+          }}
+          className="w-6 h-6 p-1"
+        >
+          <Edit className="w-3 h-3" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleAddMedicalRecord(pet.id);
+          }}
+          className="w-6 h-6 p-1 text-blue-600"
+        >
+          <FileText className="w-3 h-3" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleAddVaccination(pet.id);
+          }}
+          className="w-6 h-6 p-1 text-purple-600"
+        >
+          <Syringe className="w-3 h-3" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={(e) => {
+            e.stopPropagation();
+            setBillingTarget({ client: selectedClient, pet: pet });
+            setShowAddToBillForm(true);
+          }}
+          className="w-6 h-6 p-1 text-green-600"
+        >
+          <DollarSign className="w-3 h-3" />
+        </Button>
+      </div>
+    </div>
+  </CardHeader>
+
+  <CardContent className="p-0">
+    <div className="grid grid-cols-3 text-[11px] text-gray-700 mt-1 gap-y-0.5">
+      {pet.birth_date && (
+        <>
+          <span className="text-gray-400">Age:</span>
+          <span className="col-span-2">{getPreciseAge(pet.birth_date)}</span>
+        </>
+      )}
+      {pet.weight && (
+        <>
+          <span className="text-gray-400">Weight:</span>
+          <span className="col-span-2">{pet.weight} kg</span>
+        </>
+      )}
+      {recentRecord && (
+        <>
+          <span className="text-gray-400">Last Visit:</span>
+          <span className="col-span-2">{format(new Date(recentRecord.visit_date), 'dd-MM-yyyy')}</span>
+        </>
+      )}
+      {overdueVaccinations.length > 0 && (
+        <div className="col-span-3 mt-1">
+          <Badge variant="destructive" className="text-[10px] py-0.5 px-2 w-fit">
+            {overdueVaccinations.length} Overdue Vaccine{overdueVaccinations.length > 1 ? 's' : ''}
+          </Badge>
+        </div>
+      )}
+    </div>
+  </CardContent>
+</Card>
+
+
                 );
               })}
               {/* Add New Pet Card */}

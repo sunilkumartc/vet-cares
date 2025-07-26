@@ -45,9 +45,13 @@ const upload = multer({
 });
 
 // Get clinic profile
+// Get clinic profile - CORRECTED VERSION
 router.get('/profile', async (req, res) => {
   try {
     const tenantId = req.headers['x-tenant-id'];
+    
+    console.log('GET profile - Tenant ID:', tenantId);
+    
     if (!tenantId) {
       return res.status(400).json({ error: 'Tenant ID required' });
     }
@@ -55,7 +59,7 @@ router.get('/profile', async (req, res) => {
     const client = new MongoClient(process.env.MONGODB_URI);
     await client.connect();
     const db = client.db('vet-cares');
-
+    
     const tenant = await db.collection('tenants').findOne(
       { _id: new ObjectId(tenantId) },
       { 
@@ -79,8 +83,13 @@ router.get('/profile', async (req, res) => {
       return res.status(404).json({ error: 'Tenant not found' });
     }
 
+    console.log('Found tenant:', tenant);
+
     res.json({
       success: true,
+      // Return the raw data for verification
+      ...tenant,
+      // Also return formatted profile for compatibility
       profile: {
         clinicName: tenant.clinic_name || tenant.name,
         tagline: tenant.tagline || '',
@@ -99,15 +108,25 @@ router.get('/profile', async (req, res) => {
 });
 
 // Update clinic profile
+// Update clinic profile - CORRECTED VERSION
 router.put('/profile', async (req, res) => {
   try {
-    const tenantId = req.headers['x-tenant-id'];
+    const tenantId = req.headers['x-tenant-id'] || req.body.tenant_id;
+    
+    console.log('=== BACKEND DEBUG ===');
+    console.log('Tenant ID from header:', req.headers['x-tenant-id']);
+    console.log('Tenant ID from body:', req.body.tenant_id);
+    console.log('Final tenant ID:', tenantId);
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    
     if (!tenantId) {
       return res.status(400).json({ error: 'Tenant ID required' });
     }
 
     const {
       clinicName,
+      clinic_name, // Accept both formats
+      name,        // Accept both formats
       tagline,
       logo_url,
       address,
@@ -117,7 +136,18 @@ router.put('/profile', async (req, res) => {
       description
     } = req.body;
 
-    if (!clinicName || !clinicName.trim()) {
+    // Use whichever clinic name field is provided
+    const finalClinicName = clinicName || clinic_name || name;
+    
+    console.log('Clinic name candidates:', {
+      clinicName,
+      clinic_name,
+      name,
+      finalClinicName
+    });
+
+    if (!finalClinicName || !finalClinicName.trim()) {
+      console.error('No valid clinic name found in request');
       return res.status(400).json({ error: 'Clinic name is required' });
     }
 
@@ -126,7 +156,8 @@ router.put('/profile', async (req, res) => {
     const db = client.db('vet-cares');
 
     const updateData = {
-      clinic_name: clinicName.trim(),
+      clinic_name: finalClinicName.trim(),
+      name: finalClinicName.trim(), // Update both fields for compatibility
       tagline: tagline?.trim() || '',
       address: address?.trim() || '',
       phone: phone?.trim() || '',
@@ -141,9 +172,31 @@ router.put('/profile', async (req, res) => {
       updateData.logo_url = logo_url;
     }
 
+    console.log('Update data being sent to MongoDB:', updateData);
+
     const result = await db.collection('tenants').updateOne(
       { _id: new ObjectId(tenantId) },
       { $set: updateData }
+    );
+
+    console.log('MongoDB update result:', result);
+
+    // Verify the update by fetching the updated document
+    const updatedTenant = await db.collection('tenants').findOne(
+      { _id: new ObjectId(tenantId) },
+      { 
+        projection: {
+          name: 1,
+          clinic_name: 1,
+          tagline: 1,
+          logo_url: 1,
+          address: 1,
+          phone: 1,
+          email: 1,
+          website: 1,
+          description: 1
+        }
+      }
     );
 
     await client.close();
@@ -152,18 +205,25 @@ router.put('/profile', async (req, res) => {
       return res.status(404).json({ error: 'Tenant not found' });
     }
 
+    if (result.modifiedCount === 0) {
+      console.warn('No documents were modified - data might be the same');
+    }
+
+    console.log('Updated tenant from DB:', updatedTenant);
+
     res.json({
       success: true,
       message: 'Clinic profile updated successfully',
+      data: updatedTenant, // Return the actual data from DB
       profile: {
-        clinicName: updateData.clinic_name,
-        tagline: updateData.tagline,
-        logoUrl: updateData.logo_url,
-        address: updateData.address,
-        phone: updateData.phone,
-        email: updateData.email,
-        website: updateData.website,
-        description: updateData.description
+        clinicName: updatedTenant.clinic_name || updatedTenant.name,
+        tagline: updatedTenant.tagline,
+        logoUrl: updatedTenant.logo_url,
+        address: updatedTenant.address,
+        phone: updatedTenant.phone,
+        email: updatedTenant.email,
+        website: updatedTenant.website,
+        description: updatedTenant.description
       }
     });
   } catch (error) {
