@@ -62,6 +62,7 @@ import MyProfile from "./MyProfile";
 import Analytics from "./Analytics";
 import TenantManagement from "./TenantManagement";
 import SystemAdminLogin from "./SystemAdminLogin";
+import DebugRoutes from "./DebugRoutes";
 
 import PrescriptionPrintPreview from "./PrescriptionPrintPreview";
 
@@ -130,6 +131,7 @@ const PAGES = {
     
     Analytics: Analytics,
     TenantManagement: TenantManagement,
+    DebugRoutes: DebugRoutes,
     
 }
 
@@ -225,8 +227,14 @@ function PagesContent() {
                 <Route path="/system-admin-login" element={<SystemAdminLogin />} />
                 <Route path="/tenant-management" element={<TenantManagement />} />
                 
+                {/* Debug Route */}
+                <Route path="/debug" element={<DebugRoutes />} />
+                
                 <Route path="/PrescriptionPrintPreview" element={<PrescriptionPrintPreview />} />
                 <Route path="/prescription-preview" element={<PrescriptionPrintPreview />} />
+                
+                {/* Catch-all route for undefined paths */}
+                <Route path="*" element={<Dashboard />} />
                 
             </Routes>
         </Layout>

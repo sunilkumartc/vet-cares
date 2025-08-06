@@ -81,22 +81,32 @@ export default function RecentAppointments({ appointments, pets, clients, loadin
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-semibold text-gray-800 truncate">Unknown Client</h4>
+                        <h4 className="font-semibold text-gray-800 truncate">{appointment.userName || 'Unknown Client'}</h4>
                         <Badge className={statusColors[appointment.status] || statusColors.scheduled}>
                           {appointment.status?.replace(/_/g, ' ')}
                         </Badge>
                       </div>
                       <p className="text-sm text-gray-600 truncate">
-                        <span className="font-medium">{pet?.name || 'Unknown Pet'}</span> - {appointment.reason || appointment.service_type}
+                        <span className="font-medium">{appointment.petName || pet?.name || 'Unknown Pet'}</span> - {appointment.reason || appointment.type || appointment.service_type}
                       </p>
                       <div className="flex items-center gap-4 text-xs text-gray-500 mt-1">
                         <span className="flex items-center gap-1">
                           <Calendar className="w-3 h-3" />
-                          {format(new Date(appointment.appointment_date), 'MMM d, yyyy')}
+                          {appointment.appointment_date 
+                            ? format(new Date(appointment.appointment_date), 'MMM d, yyyy')
+                            : appointment.scheduledTime 
+                              ? format(new Date(appointment.scheduledTime), 'MMM d, yyyy')
+                              : 'No date'
+                          }
                         </span>
                         <span className="flex items-center gap-1">
                           <Clock className="w-3 h-3" />
-                          {appointment.appointment_time}
+                          {appointment.appointment_time 
+                            ? appointment.appointment_time
+                            : appointment.scheduledTime 
+                              ? format(new Date(appointment.scheduledTime), 'HH:mm')
+                              : 'No time'
+                          }
                         </span>
                       </div>
                     </div>
@@ -119,23 +129,33 @@ export default function RecentAppointments({ appointments, pets, clients, loadin
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <h4 className="font-semibold text-gray-800 truncate">
-                        {client ? `${client.first_name} ${client.last_name}` : 'Unknown Client'}
+                        {appointment.userName || (client ? `${client.first_name} ${client.last_name}` : 'Unknown Client')}
                       </h4>
                       <Badge className={statusColors[appointment.status] || statusColors.scheduled}>
                         {appointment.status?.replace(/_/g, ' ')}
                       </Badge>
                     </div>
                     <p className="text-sm text-gray-600 truncate">
-                      <span className="font-medium">{pet?.name || 'Unknown Pet'}</span> - {appointment.reason || appointment.service_type}
+                      <span className="font-medium">{appointment.petName || pet?.name || 'Unknown Pet'}</span> - {appointment.reason || appointment.type || appointment.service_type}
                     </p>
                     <div className="flex items-center gap-4 text-xs text-gray-500 mt-1">
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
-                        {format(new Date(appointment.appointment_date), 'MMM d, yyyy')}
+                        {appointment.appointment_date 
+                          ? format(new Date(appointment.appointment_date), 'MMM d, yyyy')
+                          : appointment.scheduledTime 
+                            ? format(new Date(appointment.scheduledTime), 'MMM d, yyyy')
+                            : 'No date'
+                        }
                       </span>
                       <span className="flex items-center gap-1">
                         <Clock className="w-3 h-3" />
-                        {appointment.appointment_time}
+                        {appointment.appointment_time 
+                          ? appointment.appointment_time
+                          : appointment.scheduledTime 
+                            ? format(new Date(appointment.scheduledTime), 'HH:mm')
+                            : 'No time'
+                        }
                       </span>
                     </div>
                   </div>

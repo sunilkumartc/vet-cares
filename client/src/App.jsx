@@ -25,6 +25,8 @@ function App() {
             <Route path="/contact" element={<LandingPage />} />
             <Route path="/login" element={<Pages />} />
             <Route path="/signup" element={<LandingPage />} />
+            <Route path="/stafflogin" element={<Pages />} />
+            <Route path="/staff-login" element={<Pages />} />
             <Route path="*" element={<LandingPage />} />
           </Routes>
           <Toaster />

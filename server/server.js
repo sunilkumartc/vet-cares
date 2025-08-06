@@ -30,6 +30,7 @@ import { dbUtils } from './lib/mongodb.js';
 import clientsRoute from './routes/clients.js';
 import medicalRecordsRoutes from './routes/medical-records.js';
 import mongodbManager from './lib/mongodb.js';
+import mobileIntegrationRoutes from './routes/mobile-integration.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -89,6 +90,7 @@ app.use('/api/otp', otpRoutes);
 app.use('/api/daily', dailyRoutes);
 app.use('/api/clients', clientsRoute);
 app.use('/api/medical_records', medicalRecordsRoutes);
+app.use('/api/mobile', mobileIntegrationRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));

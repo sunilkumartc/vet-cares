@@ -860,7 +860,7 @@ export default function VetVaultLanding() {
         </div>
       </footer>
 
-      <style jsx>{`
+      <style>{`
         @keyframes scroll {
           0% {
             transform: translateX(0);

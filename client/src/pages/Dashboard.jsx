@@ -13,6 +13,7 @@ import StatsCard from "../components/dashboard/StatsCard";
 import RecentAppointments from "../components/dashboard/RecentAppointments";
 import UpcomingVaccinations from "../components/dashboard/UpcomingVaccinations";
 import AppointmentCalendar from "../components/dashboard/AppointmentCalendar";
+import LinkRequestsManager from "../components/dashboard/LinkRequestsManager";
 import VideoConsultation from '../components/appointments/VideoConsultation';
 import ClientSessionManager from '../lib/clientSession';
 
@@ -95,10 +96,15 @@ export default function Dashboard() {
   };
   
   // Get current session info
-  const session = ClientSessionManager.getCurrentSession();
-  const tenant_id = session?.tenant_id || ClientSessionManager.getTenantId();
-  const staff_id = session?.staff_id || session?.id || ClientSessionManager.getStaffId();
-  const user_name = session?.full_name || session?.first_name || session?.email;
+  const staffSessionData = localStorage.getItem('staffSession');
+  const staffSession = staffSessionData ? JSON.parse(staffSessionData) : null;
+  const clientSession = ClientSessionManager.getCurrentSession();
+  
+  // Use staff session if available, otherwise fall back to client session
+  const session = staffSession || clientSession;
+  const tenant_id = staffSession?.tenant_id || clientSession?.tenant_id || ClientSessionManager.getTenantId();
+  const staff_id = staffSession?.id || staffSession?.staff_id || clientSession?.staff_id || clientSession?.id || ClientSessionManager.getStaffId();
+  const user_name = staffSession?.full_name || staffSession?.first_name || clientSession?.full_name || clientSession?.first_name || session?.email;
 
   return (
     <div className="p-4 md:p-8 space-y-8">
@@ -186,6 +192,9 @@ export default function Dashboard() {
           />
         </div>
       </div>
+
+      {/* Mobile App Link Requests */}
+      <LinkRequestsManager tenantId={tenant_id} />
 
       
       {/* Online Consultation Dashboard */}

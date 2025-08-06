@@ -11,7 +11,7 @@ export default defineConfig(({ mode }) => {
    * If you use more than one tenant sub‑domain during dev, just put the one you’re
    * testing in VITE_TENANT_HOST before you run `vite`.
    */
-  const tenant = process.env.VITE_TENANT_HOST || 'clinic3.localhost';
+  const tenant = process.env.VITE_TENANT_HOST || 'localhost';
 
   return {
     plugins: [react()],
@@ -24,7 +24,7 @@ export default defineConfig(({ mode }) => {
       proxy: {
         '/api': {
           target: `http://${tenant}:3001`,
-          changeOrigin: true,   // sets Host header to clinic3.localhost:3001
+          changeOrigin: true,   // sets Host header to localhost:3001
           secure: false,
         },
       },

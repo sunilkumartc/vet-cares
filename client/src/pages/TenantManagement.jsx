@@ -481,13 +481,14 @@ function TenantManagementContent() {
             </CardHeader>
             <CardContent>
               <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="grid w-full grid-cols-6">
+                <TabsList className="grid w-full grid-cols-7">
                   <TabsTrigger value="overview">Overview</TabsTrigger>
                   <TabsTrigger value="analytics">Analytics</TabsTrigger>
                   <TabsTrigger value="billing">Billing</TabsTrigger>
                   <TabsTrigger value="users">Users</TabsTrigger>
                   <TabsTrigger value="settings">Settings</TabsTrigger>
                   <TabsTrigger value="security">Security</TabsTrigger>
+                  <TabsTrigger value="link-requests">Link Requests</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="overview" className="space-y-4">

@@ -68,7 +68,7 @@ export default function AppointmentList({ appointments, pets, clients, loading, 
               <div className="flex-1 space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-gray-900 capitalize">
-                    {apt.reason || apt.service_type?.replace('_', ' ')}
+                    {apt.reason || apt.type || apt.service_type?.replace('_', ' ')}
                   </h3>
                   <Badge className={`${statusColors[apt.status] || statusColors.scheduled} capitalize`}>
                     {apt.status?.replace('_', ' ')}
@@ -78,22 +78,40 @@ export default function AppointmentList({ appointments, pets, clients, loading, 
                 <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-600">
                   <div className="flex items-center gap-2">
                     <PawPrint className="w-4 h-4 text-blue-500" />
-                    <span>{getPetName(apt.pet_id)}</span>
+                    <span>
+                      {apt.petName || getPetName(apt.pet_id) || 'Unknown Pet'}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <User className="w-4 h-4 text-green-500" />
-                    <span>{getClientName(apt.client_id)}</span>
+                    <span>
+                      {apt.userName || getClientName(apt.client_id) || 'Unknown Client'}
+                    </span>
                   </div>
                 </div>
 
                 <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-600">
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-purple-500" />
-                    <span>{format(new Date(apt.appointment_date), 'dd-MM-yyyy')}</span>
+                    <span>
+                      {apt.appointment_date 
+                        ? format(new Date(apt.appointment_date), 'dd-MM-yyyy')
+                        : apt.scheduledTime 
+                          ? format(new Date(apt.scheduledTime), 'dd-MM-yyyy')
+                          : 'No date'
+                      }
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4 text-orange-500" />
-                    <span>{apt.appointment_time} ({apt.duration_minutes} min)</span>
+                    <span>
+                      {apt.appointment_time 
+                        ? `${apt.appointment_time} (${apt.duration_minutes || 30} min)`
+                        : apt.scheduledTime 
+                          ? format(new Date(apt.scheduledTime), 'HH:mm') + ' (30 min)'
+                          : 'No time'
+                      }
+                    </span>
                   </div>
                 </div>
                 {apt.notes && (
