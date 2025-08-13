@@ -12,7 +12,7 @@ async function main() {
     const staff = db.collection('staff');
 
     // Get tenant ID from command line argument or use the newly created one
-    const tenantId = process.argv[2] || '68750e8e354bae6f5030bfa9';
+    const tenantId = process.argv[2] || '68943e61cc42e21c7663a4a0';
     
     // Default password for all staff
     const defaultPassword = 'password123';
@@ -20,7 +20,7 @@ async function main() {
 
     const staffMembers = [
       {
-        email: 'admin@clinic3.localhost',
+        email: 'admin@downtownvet.com',
         password: hashedPassword,
         first_name: 'Admin',
         last_name: 'User',
