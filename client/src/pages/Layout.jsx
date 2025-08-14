@@ -1,8 +1,12 @@
 import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Heart, Calendar, Users, PawPrint, FileText, Syringe, CreditCard, LogOut, AlertTriangle, Search, Plus, Phone, Mail, ArrowRight, X, ShoppingCart, Package, Settings, ChevronDown, FileSliders, BarChart3, // Added BarChart3 import
-  Building2,  } from "lucide-react";
+import { 
+  Heart, Calendar, Users, PawPrint, FileText, Syringe, CreditCard, 
+  LogOut, AlertTriangle, Search, Plus, Phone, Mail, ArrowRight, X, 
+  ShoppingCart, Package, Settings, ChevronDown, FileSliders, BarChart3, 
+  Building2 
+} from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -26,8 +30,6 @@ const adminNavigation = [
   { title: "Dashboard", url: createPageUrl("Dashboard"), icon: Heart },
   { title: "Appointments", url: createPageUrl("Appointments"), icon: Calendar },
   { title: "Diagnostic Reports", url: createPageUrl("DiagnosticReports"), icon: FileText },
-  // { title: "Medical Records", url: createPageUrl("MedicalRecords"), icon: FileText },
-  
   { title: "Sales & Dispense", url: createPageUrl("SalesDispense"), icon: ShoppingCart },
   { title: "Inventory", url: createPageUrl("InventoryManagement"), icon: Package },
   { title: "Billing", url: createPageUrl("Billing"), icon: CreditCard },
@@ -38,7 +40,6 @@ const adminNavigation = [
 
 const settingsNavigation = [
   { title: "Clinic Profile", url: createPageUrl("Settings"), icon: Settings },
- 
   { title: "Client Management", url: createPageUrl("Clients"), icon: Users },
   { title: "Pet Management", url: createPageUrl("Pets"), icon: PawPrint },
   { title: "Vaccine Settings", url: createPageUrl("VaccineSettings"), icon: Syringe },
@@ -68,8 +69,17 @@ export default function Layout({ children, currentPageName }) {
     pathname: location.pathname,
     hasStaffSession: !!staffSession,
     hasUser: !!user,
-    staffSessionData: staffSession ? { name: staffSession.name, role: staffSession.role } : null,
-    userData: user ? { name: user.name, email: user.email } : null,
+    staffSessionData: staffSession ? { 
+      name: staffSession.name, 
+      role: staffSession.role,
+      tenantId: staffSession.tenant_id || staffSession.tenantId 
+    } : null,
+    userData: user ? { 
+      name: user.name, 
+      email: user.email,
+      tenantId: user.tenant_id || user.tenantId 
+    } : null,
+    tenantInfo: tenant,
     localStorage: {
       staffSession: localStorage.getItem('staffSession') ? 'exists' : 'null',
       clientSession: localStorage.getItem('clientSession') ? 'exists' : 'null'
@@ -86,6 +96,20 @@ export default function Layout({ children, currentPageName }) {
   const [showClientForm, setShowClientForm] = React.useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
 
+  // Helper function to get current tenant ID
+  const getCurrentTenantId = () => {
+    // Priority order: staffSession > user > tenant context
+    if (staffSession?.tenant_id) return staffSession.tenant_id;
+    if (staffSession?.tenantId) return staffSession.tenantId;
+    if (user?.tenant_id) return user.tenant_id;
+    if (user?.tenantId) return user.tenantId;
+    if (tenant?.id) return tenant.id;
+    if (tenant?._id) return tenant._id;
+    
+    console.warn('No tenant ID found in any context');
+    return null;
+  };
+
   const canAccess = (pageTitle, permissions) => {
     if (!permissions || permissions.length === 0) return false;
     if (permissions.includes("all")) return true;
@@ -94,7 +118,6 @@ export default function Layout({ children, currentPageName }) {
     const normalizedTitle = pageTitle.toLowerCase().replace(/ /g, '_');
     return permissions.includes(normalizedTitle);
   };
-  
 
   React.useEffect(() => {
     // If loading is finished, and we have a staff session,
@@ -157,19 +180,73 @@ export default function Layout({ children, currentPageName }) {
     setFilteredClients(filtered);
   }, [clients, pets, searchTerm]);
 
+  // FIXED: Load search data with proper tenant filtering
   const loadSearchData = async () => {
     setSearchLoading(true);
     try {
-      const [clientData, petData, recordData] = await Promise.all([
-        ApiClient.list('-created_date'),
-        ApiPet.list('-created_date'),
-        ApiMedicalRecord.list('-visit_date')
-      ]);
-      setClients(clientData);
-      setPets(petData);
-      setMedicalRecords(recordData);
+      const currentTenantId = getCurrentTenantId();
+      console.log('Loading search data with tenant ID:', currentTenantId);
+      
+      if (!currentTenantId) {
+        console.error('No tenant ID available for filtering');
+        setSearchLoading(false);
+        return;
+      }
+
+      // Option 1: If your API supports tenant filtering via query parameters
+      try {
+        const [clientData, petData, recordData] = await Promise.all([
+          ApiClient.list('-created_date', { tenant_id: currentTenantId }),
+          ApiPet.list('-created_date', { tenant_id: currentTenantId }),
+          ApiMedicalRecord.list('-visit_date', { tenant_id: currentTenantId })
+        ]);
+
+        console.log('Filtered search data (API level):', {
+          clients: clientData?.length || 0,
+          pets: petData?.length || 0,
+          records: recordData?.length || 0,
+          tenantId: currentTenantId
+        });
+
+        setClients(clientData || []);
+        setPets(petData || []);
+        setMedicalRecords(recordData || []);
+      } catch (apiError) {
+        console.warn('API-level filtering failed, trying frontend filtering:', apiError);
+        
+        // Option 2: If your API doesn't support tenant filtering, filter on frontend
+        const [allClients, allPets, allRecords] = await Promise.all([
+          ApiClient.list('-created_date'),
+          ApiPet.list('-created_date'),
+          ApiMedicalRecord.list('-visit_date')
+        ]);
+
+        // Filter by tenant ID on the frontend
+        const clientData = allClients.filter(client => 
+          client.tenant_id === currentTenantId || client.tenantId === currentTenantId
+        );
+        const petData = allPets.filter(pet => 
+          pet.tenant_id === currentTenantId || pet.tenantId === currentTenantId
+        );
+        const recordData = allRecords.filter(record => 
+          record.tenant_id === currentTenantId || record.tenantId === currentTenantId
+        );
+
+        console.log('Filtered search data (Frontend level):', {
+          clients: clientData?.length || 0,
+          pets: petData?.length || 0,
+          records: recordData?.length || 0,
+          tenantId: currentTenantId
+        });
+
+        setClients(clientData || []);
+        setPets(petData || []);
+        setMedicalRecords(recordData || []);
+      }
     } catch (error) {
       console.error('Error loading search data:', error);
+      // Show user-friendly error
+      alert('Failed to load client data. Please try again.');
     } finally {
       setSearchLoading(false);
     }
@@ -193,8 +270,20 @@ export default function Layout({ children, currentPageName }) {
 
   const handleClientFormSubmit = async (clientData) => {
     try {
-      await ApiClient.create(clientData);
+      // FIXED: Include tenant ID when creating new client
+      const currentTenantId = getCurrentTenantId();
+      const clientDataWithTenant = {
+        ...clientData,
+        tenant_id: currentTenantId,
+        tenantId: currentTenantId // Include both formats for compatibility
+      };
+
+      console.log('Creating client with tenant ID:', clientDataWithTenant);
+      
+      await ApiClient.create(clientDataWithTenant);
       setShowClientForm(false);
+      
+      // Reload search data to include the new client
       await loadSearchData();
       alert("Client added successfully!");
     } catch (error) {
@@ -216,6 +305,7 @@ export default function Layout({ children, currentPageName }) {
     }
   };
 
+  // ENHANCED: Global Search Modal with tenant-aware display
   const GlobalSearchModal = () => (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col">
@@ -234,10 +324,23 @@ export default function Layout({ children, currentPageName }) {
               <X className="w-5 h-5" />
             </Button>
           </div>
+          {/* NEW: Display current tenant info */}
+          <div className="mt-2 text-xs text-gray-500 flex items-center gap-2">
+            <Building2 className="w-3 h-3" />
+            <span>
+              Searching in: {getBranding('clinicName') || tenant?.name || 'Current Clinic'} 
+              {getCurrentTenantId() && (
+                <span className="ml-1 text-gray-400">({getCurrentTenantId()})</span>
+              )}
+            </span>
+          </div>
         </div>
         <div className="flex-1 overflow-y-auto p-4">
           {searchLoading ? (
-            <div className="text-center text-gray-500">Loading clients...</div>
+            <div className="text-center text-gray-500">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
+              Loading clients...
+            </div>
           ) : filteredClients.length > 0 ? (
             <ul className="space-y-2">
               {filteredClients.map((client) => {
@@ -255,7 +358,9 @@ export default function Layout({ children, currentPageName }) {
                       </div>
                       <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
                         <span className="flex items-center gap-1"><PawPrint className="w-3 h-3" />{clientPets.map((p) => p.name).join(", ") || "No pets"}</span>
-                        {lastVisit && (<span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> Last visit: {format(new Date(lastVisit.visit_date), "PP")}</span>)}
+                        {lastVisit && (
+                          <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> Last visit: {format(new Date(lastVisit.visit_date), "PP")}</span>
+                        )}
                       </div>
                     </div>
                     <ArrowRight className="w-5 h-5 text-gray-400" />
@@ -264,7 +369,15 @@ export default function Layout({ children, currentPageName }) {
               })}
             </ul>
           ) : (
-            <div className="text-center text-gray-500 py-8">No clients found.</div>
+            <div className="text-center text-gray-500 py-8">
+              <PawPrint className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+              <p>No clients found{searchTerm ? ` matching "${searchTerm}"` : ''}.</p>
+              {!getCurrentTenantId() && (
+                <p className="text-red-500 text-xs mt-2">
+                  ⚠️ No tenant ID found - results may be incomplete
+                </p>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -348,66 +461,66 @@ export default function Layout({ children, currentPageName }) {
                 </div>
               </SidebarHeader>
               <SidebarContent className="flex flex-col">
-  <nav className="flex-1 px-4 py-4 space-y-2">
-    {/* Main Navigation Section */}
-    <div>
-      <p className="px-4 pt-4 pb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Navigation</p>
-      {adminNavigation
-        .filter((item) => staffSession?.permissions?.includes("all") || canAccess(item.title, staffSession.permissions))
-        .map((item) => (
-          <Link
-            key={item.title}
-            to={item.url}
-            onClick={handleNavLinkClick} // Added onClick to auto-close sidebar on mobile
-            className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-              location.pathname === item.url.split('?')[0]
-                ? 'bg-blue-100 text-blue-700'
-                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-            }`}
-          >
-            <item.icon className="w-5 h-5" />
-            <span>{item.title}</span>
-          </Link>
-        ))}
-    </div>
+                <nav className="flex-1 px-4 py-4 space-y-2">
+                  {/* Main Navigation Section */}
+                  <div>
+                    <p className="px-4 pt-4 pb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Navigation</p>
+                    {adminNavigation
+                      .filter((item) => staffSession?.permissions?.includes("all") || canAccess(item.title, staffSession.permissions))
+                      .map((item) => (
+                        <Link
+                          key={item.title}
+                          to={item.url}
+                          onClick={handleNavLinkClick} // Added onClick to auto-close sidebar on mobile
+                          className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                            location.pathname === item.url.split('?')[0]
+                              ? 'bg-blue-100 text-blue-700'
+                              : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                          }`}
+                        >
+                          <item.icon className="w-5 h-5" />
+                          <span>{item.title}</span>
+                        </Link>
+                      ))}
+                  </div>
 
-    {/* Collapsible Settings Section */}
-    <div>
-      <p className="px-4 pt-6 pb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Management</p>
-      <button
-        onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-        className="flex items-center justify-between w-full px-4 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
-      >
-        <div className="flex items-center gap-3">
-          <Settings className="w-5 h-5" />
-          <span>Settings</span>
-        </div>
-        <ChevronDown className={`w-5 h-5 transition-transform ${isSettingsOpen ? 'rotate-180' : ''}`} />
-      </button>
-      {isSettingsOpen && (
-        <div className="pl-6 mt-1 space-y-1">
-          {settingsNavigation
-            .filter((item) => staffSession?.permissions?.includes("all") || canAccess(item.title, staffSession.permissions))
-            .map((item) => (
-              <Link
-                key={item.title}
-                to={item.url}
-                onClick={handleNavLinkClick} // Added onClick to auto-close sidebar on mobile
-                className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  location.pathname.startsWith(item.url)
-                    ? 'bg-purple-100 text-purple-700'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                }`}
-              >
-                <item.icon className="w-5 h-5" />
-                <span>{item.title}</span>
-              </Link>
-            ))}
-        </div>
-      )}
-    </div>
-  </nav>
-</SidebarContent>
+                  {/* Collapsible Settings Section */}
+                  <div>
+                    <p className="px-4 pt-6 pb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Management</p>
+                    <button
+                      onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+                      className="flex items-center justify-between w-full px-4 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Settings className="w-5 h-5" />
+                        <span>Settings</span>
+                      </div>
+                      <ChevronDown className={`w-5 h-5 transition-transform ${isSettingsOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    {isSettingsOpen && (
+                      <div className="pl-6 mt-1 space-y-1">
+                        {settingsNavigation
+                          .filter((item) => staffSession?.permissions?.includes("all") || canAccess(item.title, staffSession.permissions))
+                          .map((item) => (
+                            <Link
+                              key={item.title}
+                              to={item.url}
+                              onClick={handleNavLinkClick} // Added onClick to auto-close sidebar on mobile
+                              className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                                location.pathname.startsWith(item.url)
+                                  ? 'bg-purple-100 text-purple-700'
+                                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                              }`}
+                            >
+                              <item.icon className="w-5 h-5" />
+                              <span>{item.title}</span>
+                            </Link>
+                          ))}
+                      </div>
+                    )}
+                  </div>
+                </nav>
+              </SidebarContent>
 
               <SidebarFooter>
                 <div className="px-3 py-4 space-y-2 text-center">
@@ -423,7 +536,7 @@ export default function Layout({ children, currentPageName }) {
               <div className="bg-white border-b border-gray-200 px-6 py-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <SidebarTrigger className="sidebar-trigger lg-hidden hover:bg-gray-100 p-2 rounded-lg transition-colors duration-200" /> {/* Added className="sidebar-trigger" */}
+                    <SidebarTrigger className="sidebar-trigger lg:hidden hover:bg-gray-100 p-2 rounded-lg transition-colors duration-200" /> {/* Added className="sidebar-trigger" */}
                     
                     {/* Main Menu - Action Buttons */}
                     <button
@@ -499,7 +612,7 @@ export default function Layout({ children, currentPageName }) {
           </Sidebar>
           <main className="flex-1 flex flex-col overflow-hidden">
             <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-              <SidebarTrigger className="sidebar-trigger lg-hidden" /> {/* Added className="sidebar-trigger" */}
+              <SidebarTrigger className="sidebar-trigger lg:hidden" /> {/* Added className="sidebar-trigger" */}
               <h1 className="text-xl font-semibold text-gray-800">{currentPageName === 'MyProfile' ? 'My Profile' : currentPageName}</h1>
             </div>
             <div className="flex-1 overflow-auto bg-gray-50">{children}</div>

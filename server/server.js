@@ -17,6 +17,7 @@ import {
   getIndexStats,
   indexSOAPField
 } from './src/api/elasticsearch.js';
+
 import AWS from 'aws-sdk';
 import tenantRoutes from './routes/tenant.js';
 import publicRoutes from './routes/public.js';
@@ -31,6 +32,10 @@ import clientsRoute from './routes/clients.js';
 import medicalRecordsRoutes from './routes/medical-records.js';
 import mongodbManager from './lib/mongodb.js';
 import mobileIntegrationRoutes from './routes/mobile-integration.js';
+import petsRoutes from './routes/pets.js';
+import documentsRoutes from './routes/documents.js';
+import appointmentsRoutes from './routes/appointments.js';
+import dailyLogsRoutes from './routes/daily-logs.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -58,12 +63,12 @@ const corsOptions = {
     if (origin.includes('vercel.app')) {
       return callback(null, true);
     }
-    
+
     // Allow the main domain
     if (origin === 'https://vetvault.in' || origin === 'http://vetvault.in') {
       return callback(null, true);
-    }
-    
+    } 
+
     console.log('CORS blocked origin:', origin);
     callback(new Error('Not allowed by CORS'));
   },
@@ -91,6 +96,10 @@ app.use('/api/daily', dailyRoutes);
 app.use('/api/clients', clientsRoute);
 app.use('/api/medical_records', medicalRecordsRoutes);
 app.use('/api/mobile', mobileIntegrationRoutes);
+app.use('/api/pets', petsRoutes);
+app.use('/api/appointments', appointmentsRoutes);
+app.use('/api/documents', documentsRoutes);
+app.use('/api/daily-logs', dailyLogsRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
@@ -195,10 +204,6 @@ function buildTenantQuery(tenantId, filters = {}) {
   Object.assign(query, filters);
   return query;
 }
-
-// API Routes
-
-
 
 // Staff API
 app.get('/api/staff', async (req, res) => {

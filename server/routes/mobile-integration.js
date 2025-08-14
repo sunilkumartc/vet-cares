@@ -265,6 +265,19 @@ router.patch('/clinic-link-requests/:requestId', async (req, res) => {
       });
     }
 
+    // First, get the link request details to get userId and clinicId
+    const linkRequest = await db.collection('clinic_link_requests').findOne({
+      _id: new ObjectId(requestId)
+    });
+
+    if (!linkRequest) {
+      return res.status(404).json({
+        success: false,
+        message: 'Link request not found'
+      });
+    }
+
+    // Update the link request status
     const result = await db.collection('clinic_link_requests').updateOne(
       { _id: new ObjectId(requestId) },
       {
@@ -281,6 +294,39 @@ router.patch('/clinic-link-requests/:requestId', async (req, res) => {
         success: false,
         message: 'Link request not found'
       });
+    }
+
+    // Update client profile based on approval/rejection
+    try {
+      const clientUpdate = {
+        updated_at: new Date()
+      };
+
+      if (status === 'approved') {
+        // Set tenant_id to the approved clinic ID
+        clientUpdate.tenant_id = linkRequest.clinicId.toString();
+        console.log(`Setting client ${linkRequest.userId} tenant_id to ${linkRequest.clinicId}`);
+      } else if (status === 'rejected') {
+        // Set tenant_id to null
+        clientUpdate.tenant_id = null;
+        console.log(`Setting client ${linkRequest.userId} tenant_id to null (rejected)`);
+      }
+
+      // Update the client's profile
+      const clientUpdateResult = await db.collection('clients').updateOne(
+        { _id: new ObjectId(linkRequest.userId) },
+        { $set: clientUpdate }
+      );
+
+      if (clientUpdateResult.matchedCount > 0) {
+        console.log(`Successfully updated client profile for user ${linkRequest.userId}`);
+      } else {
+        console.warn(`Client not found for user ID: ${linkRequest.userId}`);
+      }
+
+    } catch (clientUpdateError) {
+      console.error('Error updating client profile:', clientUpdateError);
+      // Don't fail the main request if client update fails
     }
 
     // Send notification to mobile app user
@@ -708,6 +754,7 @@ router.get('/admin/link-requests', async (req, res) => {
 });
 
 // Approve or reject a clinic link request
+// Approve or reject a clinic link request (Admin endpoint)
 router.put('/admin/link-requests/:requestId', async (req, res) => {
   try {
     const { requestId } = req.params;
@@ -720,6 +767,19 @@ router.put('/admin/link-requests/:requestId', async (req, res) => {
       });
     }
 
+    // First, get the link request details to get userId and clinicId
+    const linkRequest = await db.collection('clinic_link_requests').findOne({
+      _id: new ObjectId(requestId)
+    });
+
+    if (!linkRequest) {
+      return res.status(404).json({
+        success: false,
+        message: 'Link request not found'
+      });
+    }
+
+    // Update the link request status
     const result = await db.collection('clinic_link_requests').updateOne(
       { _id: new ObjectId(requestId) },
       {
@@ -738,6 +798,60 @@ router.put('/admin/link-requests/:requestId', async (req, res) => {
       });
     }
 
+    // Update client profile based on approval/rejection
+    try {
+      const clientUpdate = {
+        updated_at: new Date()
+      };
+
+      if (status === 'approved') {
+        // Set tenant_id to the approved clinic ID
+        clientUpdate.tenant_id = linkRequest.clinicId.toString();
+        console.log(`Admin approved: Setting client ${linkRequest.userId} tenant_id to ${linkRequest.clinicId}`);
+      } else if (status === 'rejected') {
+        // Set tenant_id to null
+        clientUpdate.tenant_id = null;
+        console.log(`Admin rejected: Setting client ${linkRequest.userId} tenant_id to null`);
+      }
+
+      // Update the client's profile
+      const clientUpdateResult = await db.collection('clients').updateOne(
+        { _id: new ObjectId(linkRequest.userId) },
+        { $set: clientUpdate }
+      );
+
+      if (clientUpdateResult.matchedCount > 0) {
+        console.log(`Successfully updated client profile for user ${linkRequest.userId}`);
+      } else {
+        console.warn(`Client not found for user ID: ${linkRequest.userId}`);
+      }
+
+    } catch (clientUpdateError) {
+      console.error('Error updating client profile:', clientUpdateError);
+      // Don't fail the main request if client update fails
+    }
+
+    // Send notification to mobile app user
+    try {
+      const notificationService = require('../../vetvault-mobile/api/services/notificationService');
+      
+      // Get clinic name for notification
+      const clinic = await db.collection('tenants').findOne({ 
+        _id: new ObjectId(linkRequest.clinicId) 
+      });
+      const clinicName = clinic?.name || 'Clinic';
+      
+      await notificationService.sendLinkRequestNotification(
+        linkRequest.userId,
+        clinicName,
+        status,
+        adminNotes
+      );
+    } catch (error) {
+      console.error('Error sending notification:', error);
+      // Don't fail the request if notification fails
+    }
+
     res.json({
       success: true,
       message: `Link request ${status} successfully`
@@ -752,4 +866,56 @@ router.put('/admin/link-requests/:requestId', async (req, res) => {
   }
 });
 
+// Add a new endpoint to handle unlinking (setting tenant_id to null)
+router.delete('/users/:userId/unlink-clinic', async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Update client profile to remove tenant_id
+    const clientUpdateResult = await db.collection('clients').updateOne(
+      { _id: new ObjectId(userId) },
+      { 
+        $set: { 
+          tenant_id: null,
+          updated_at: new Date()
+        } 
+      }
+    );
+
+    if (clientUpdateResult.matchedCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Client not found'
+      });
+    }
+
+    // Update any approved link requests to 'unlinked' status
+    await db.collection('clinic_link_requests').updateMany(
+      {
+        userId,
+        status: 'approved'
+      },
+      {
+        $set: {
+          status: 'unlinked',
+          updatedAt: new Date()
+        }
+      }
+    );
+
+    console.log(`Successfully unlinked client ${userId} from clinic`);
+
+    res.json({
+      success: true,
+      message: 'Clinic unlinked successfully'
+    });
+
+  } catch (error) {
+    console.error('Unlink clinic error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to unlink clinic'
+    });
+  }
+});
 export default router; 
