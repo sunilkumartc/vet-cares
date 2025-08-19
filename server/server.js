@@ -32,10 +32,11 @@ import clientsRoute from './routes/clients.js';
 import medicalRecordsRoutes from './routes/medical-records.js';
 import mongodbManager from './lib/mongodb.js';
 import mobileIntegrationRoutes from './routes/mobile-integration.js';
+import mobileRoute from './routes/mobile-client.js';
 import petsRoutes from './routes/pets.js';
-import documentsRoutes from './routes/documents.js';
-import appointmentsRoutes from './routes/appointments.js';
-import dailyLogsRoutes from './routes/daily-logs.js';
+// import documentsRoutes from './routes/documents.js';
+// import appointmentsRoutes from './routes/appointments.js';
+// import dailyLogsRoutes from './routes/daily-logs.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -96,10 +97,11 @@ app.use('/api/daily', dailyRoutes);
 app.use('/api/clients', clientsRoute);
 app.use('/api/medical_records', medicalRecordsRoutes);
 app.use('/api/mobile', mobileIntegrationRoutes);
-app.use('/api/pets', petsRoutes);
-app.use('/api/appointments', appointmentsRoutes);
-app.use('/api/documents', documentsRoutes);
-app.use('/api/daily-logs', dailyLogsRoutes);
+app.use('/api/mobileclient',mobileRoute);
+app.use('/api/petss', petsRoutes);
+// app.use('/api/appointments', appointmentsRoutes);
+// app.use('/api/documents', documentsRoutes);
+// app.use('/api/daily-logs', dailyLogsRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));

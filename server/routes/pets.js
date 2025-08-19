@@ -72,7 +72,7 @@ const authenticateToken = async (req, res, next) => {
 };
 
 
-// GET /api/pets - Get all pets for authenticated user
+// GET /api/petss - Get all pets for authenticated user
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const { page = 1, limit = 10, species, needsVaccination } = req.query;
