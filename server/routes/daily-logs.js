@@ -28,41 +28,62 @@ const authenticateToken = async (req, res, next) => {
   }
 };
 
-// Helper function to populate daily log details
+// FIXED: Helper function to safely convert to ObjectId
+const toObjectId = (id) => {
+  try {
+    return typeof id === 'string' ? new ObjectId(id) : id;
+  } catch (error) {
+    console.error('Invalid ObjectId:', id);
+    return null;
+  }
+};
+
+// FIXED: Helper function to populate daily log details with better error handling
 const populateDailyLogDetails = async (db, dailyLogs) => {
   return await Promise.all(
     dailyLogs.map(async (log) => {
-      // Populate pet details
-      if (log.petId) {
-        const pet = await db.collection('pets').findOne({ 
-          _id: new ObjectId(log.petId) 
-        });
-        if (pet) {
-          log.petId = {
-            _id: pet._id.toString(),
-            name: pet.name,
-            species: pet.species,
-            breed: pet.breed
-          };
+      try {
+        // Populate pet details
+        if (log.petId) {
+          const petObjectId = toObjectId(log.petId);
+          if (petObjectId) {
+            const pet = await db.collection('pets').findOne({ 
+              _id: petObjectId 
+            });
+            if (pet) {
+              log.pet = {
+                _id: pet._id.toString(),
+                name: pet.name,
+                species: pet.species,
+                breed: pet.breed
+              };
+            }
+          }
         }
-      }
 
-      // Populate owner details
-      if (log.ownerId) {
-        const owner = await db.collection('clients').findOne({ 
-          _id: new ObjectId(log.ownerId) 
-        });
-        if (owner) {
-          log.ownerId = {
-            _id: owner._id.toString(),
-            name: owner.first_name || owner.name || 'Unknown',
-            email: owner.email,
-            phone: owner.phone
-          };
+        // Populate owner details
+        if (log.client_id) {
+          const clientObjectId = toObjectId(log.client_id);
+          if (clientObjectId) {
+            const owner = await db.collection('users').findOne({ 
+              _id: clientObjectId 
+            });
+            if (owner) {
+              log.owner = {
+                _id: owner._id.toString(),
+                name: owner.first_name || owner.name || 'Unknown',
+                email: owner.email,
+                phone: owner.phone
+              };
+            }
+          }
         }
-      }
 
-      return log;
+        return log;
+      } catch (error) {
+        console.error('Error populating daily log details:', error);
+        return log;
+      }
     })
   );
 };
@@ -85,14 +106,26 @@ router.get('/', authenticateToken, async (req, res) => {
     const db = client.db('vet-cares');
     const dailyLogsCollection = db.collection('daily_logs');
 
+    // FIXED: Flexible client_id matching
     const query = {
-      ownerId: new ObjectId(req.user.userId),
+      $or: [
+        { client_id: req.user.userId },
+        { client_id: toObjectId(req.user.userId) }
+      ],
       isActive: true
     };
 
     // Add filters
     if (petId) {
-      query.petId = new ObjectId(petId);
+      const petObjectId = toObjectId(petId);
+      if (!petObjectId) {
+        await client.close();
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid pet ID'
+        });
+      }
+      query.petId = petObjectId;
     }
 
     if (activityType) {
@@ -145,7 +178,7 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
-// GET /api/daily-logs/pet/:petId - Get daily logs for specific pet with optional date filter
+// GET /api/daily-logs/pet/:petId - Get daily logs for specific pet
 router.get('/pet/:petId', authenticateToken, async (req, res) => {
   try {
     const { petId } = req.params;
@@ -157,24 +190,40 @@ router.get('/pet/:petId', authenticateToken, async (req, res) => {
     const dailyLogsCollection = db.collection('daily_logs');
     const petsCollection = db.collection('pets');
 
-    // Verify pet belongs to user
+    // FIXED: Safe ObjectId conversion
+    const petObjectId = toObjectId(petId);
+    if (!petObjectId) {
+      await client.close();
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid pet ID format'
+      });
+    }
+
+    // FIXED: Verify pet belongs to user with flexible client_id matching
     const pet = await petsCollection.findOne({
-      _id: new ObjectId(petId),
-      ownerId: req.user.userId,
-      isActive: true
+      _id: petObjectId,
+      $or: [
+        { client_id: req.user.userId },
+        { client_id: toObjectId(req.user.userId) }
+      ]
     });
 
     if (!pet) {
       await client.close();
       return res.status(404).json({
         success: false,
-        message: 'Pet not found'
+        message: 'Pet not found or access denied'
       });
     }
 
+    // FIXED: Build query with flexible client_id matching
     const query = {
-      petId: new ObjectId(petId),
-      ownerId: new ObjectId(req.user.userId),
+      petId: petObjectId,
+      $or: [
+        { client_id: req.user.userId },
+        { client_id: toObjectId(req.user.userId) }
+      ],
       isActive: true
     };
 
@@ -208,10 +257,23 @@ router.get('/pet/:petId', authenticateToken, async (req, res) => {
 
     await client.close();
 
-    // Return logs directly for the service to process
     res.json({
       success: true,
-      data: dailyLogs
+      data: {
+        dailyLogs,
+        pet: {
+          _id: pet._id,
+          name: pet.name,
+          species: pet.species,
+          breed: pet.breed
+        },
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total,
+          pages: Math.ceil(total / parseInt(limit))
+        }
+      }
     });
 
   } catch (error) {
@@ -235,18 +297,30 @@ router.get('/pet/:petId/recent', authenticateToken, async (req, res) => {
     const dailyLogsCollection = db.collection('daily_logs');
     const petsCollection = db.collection('pets');
 
-    // Verify pet belongs to user
+    // FIXED: Safe ObjectId conversion
+    const petObjectId = toObjectId(petId);
+    if (!petObjectId) {
+      await client.close();
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid pet ID format'
+      });
+    }
+
+    // FIXED: Verify pet belongs to user with flexible matching
     const pet = await petsCollection.findOne({
-      _id: new ObjectId(petId),
-      ownerId: req.user.userId,
-      isActive: true
+      _id: petObjectId,
+      $or: [
+        { client_id: req.user.userId },
+        { client_id: toObjectId(req.user.userId) }
+      ]
     });
 
     if (!pet) {
       await client.close();
       return res.status(404).json({
         success: false,
-        message: 'Pet not found'
+        message: 'Pet not found or access denied'
       });
     }
 
@@ -255,8 +329,11 @@ router.get('/pet/:petId/recent', authenticateToken, async (req, res) => {
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
     const query = {
-      petId: new ObjectId(petId),
-      ownerId: new ObjectId(req.user.userId),
+      petId: petObjectId,
+      $or: [
+        { client_id: req.user.userId },
+        { client_id: toObjectId(req.user.userId) }
+      ],
       isActive: true,
       activityTime: { $gte: sevenDaysAgo }
     };
@@ -272,7 +349,6 @@ router.get('/pet/:petId/recent', authenticateToken, async (req, res) => {
 
     await client.close();
 
-    // Return logs directly for the service to process
     res.json({
       success: true,
       data: dailyLogs
@@ -292,14 +368,26 @@ router.get('/:logId', authenticateToken, async (req, res) => {
   try {
     const { logId } = req.params;
 
+    // FIXED: Safe ObjectId conversion
+    const logObjectId = toObjectId(logId);
+    if (!logObjectId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid log ID format'
+      });
+    }
+
     const client = new MongoClient(process.env.MONGODB_URI);
     await client.connect();
     const db = client.db('vet-cares');
     const dailyLogsCollection = db.collection('daily_logs');
 
     let dailyLog = await dailyLogsCollection.findOne({
-      _id: new ObjectId(logId),
-      ownerId: new ObjectId(req.user.userId),
+      _id: logObjectId,
+      $or: [
+        { client_id: req.user.userId },
+        { client_id: toObjectId(req.user.userId) }
+      ],
       isActive: true
     });
 
@@ -355,24 +443,36 @@ router.post('/', authenticateToken, async (req, res) => {
     const dailyLogsCollection = db.collection('daily_logs');
     const petsCollection = db.collection('pets');
 
-    // Verify pet belongs to user
+    // FIXED: Safe ObjectId conversion
+    const petObjectId = toObjectId(petId);
+    if (!petObjectId) {
+      await client.close();
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid pet ID format'
+      });
+    }
+
+    // FIXED: Verify pet belongs to user with flexible matching
     const pet = await petsCollection.findOne({
-      _id: new ObjectId(petId),
-      ownerId: req.user.userId,
-      isActive: true
+      _id: petObjectId,
+      $or: [
+        { client_id: req.user.userId },
+        { client_id: toObjectId(req.user.userId) }
+      ]
     });
 
     if (!pet) {
       await client.close();
       return res.status(404).json({
         success: false,
-        message: 'Pet not found'
+        message: 'Pet not found or access denied'
       });
     }
 
     const newDailyLog = {
-      ownerId: new ObjectId(req.user.userId),
-      petId: new ObjectId(petId),
+      client_id: toObjectId(req.user.userId),
+      petId: petObjectId,
       activityType: activityType.toLowerCase(),
       activityTime: new Date(activityTime),
       details: details || null,
@@ -416,9 +516,18 @@ router.put('/:logId', authenticateToken, async (req, res) => {
     const { logId } = req.params;
     const updates = { ...req.body };
     
+    // FIXED: Safe ObjectId conversion for logId
+    const logObjectId = toObjectId(logId);
+    if (!logObjectId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid log ID format'
+      });
+    }
+    
     // Remove fields that shouldn't be updated directly
     delete updates._id;
-    delete updates.ownerId;
+    delete updates.client_id;
     delete updates.petId;
     delete updates.createdAt;
     
@@ -441,8 +550,11 @@ router.put('/:logId', authenticateToken, async (req, res) => {
 
     const result = await dailyLogsCollection.updateOne(
       {
-        _id: new ObjectId(logId),
-        ownerId: new ObjectId(req.user.userId),
+        _id: logObjectId,
+        $or: [
+          { client_id: req.user.userId },
+          { client_id: toObjectId(req.user.userId) }
+        ],
         isActive: true
       },
       { $set: updates }
@@ -458,7 +570,7 @@ router.put('/:logId', authenticateToken, async (req, res) => {
 
     // Get updated daily log with populated details
     let updatedDailyLog = await dailyLogsCollection.findOne({ 
-      _id: new ObjectId(logId) 
+      _id: logObjectId 
     });
 
     // Populate related details
@@ -487,6 +599,15 @@ router.delete('/:logId', authenticateToken, async (req, res) => {
   try {
     const { logId } = req.params;
 
+    // FIXED: Safe ObjectId conversion
+    const logObjectId = toObjectId(logId);
+    if (!logObjectId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid log ID format'
+      });
+    }
+
     const client = new MongoClient(process.env.MONGODB_URI);
     await client.connect();
     const db = client.db('vet-cares');
@@ -494,8 +615,11 @@ router.delete('/:logId', authenticateToken, async (req, res) => {
 
     const result = await dailyLogsCollection.updateOne(
       {
-        _id: new ObjectId(logId),
-        ownerId: new ObjectId(req.user.userId),
+        _id: logObjectId,
+        $or: [
+          { client_id: req.user.userId },
+          { client_id: toObjectId(req.user.userId) }
+        ],
         isActive: true
       },
       {
@@ -543,24 +667,39 @@ router.get('/pet/:petId/summary', authenticateToken, async (req, res) => {
     const dailyLogsCollection = db.collection('daily_logs');
     const petsCollection = db.collection('pets');
 
-    // Verify pet belongs to user
+    // FIXED: Safe ObjectId conversion
+    const petObjectId = toObjectId(petId);
+    if (!petObjectId) {
+      await client.close();
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid pet ID format'
+      });
+    }
+
+    // FIXED: Verify pet belongs to user with flexible matching
     const pet = await petsCollection.findOne({
-      _id: new ObjectId(petId),
-      ownerId: req.user.userId,
-      isActive: true
+      _id: petObjectId,
+      $or: [
+        { client_id: req.user.userId },
+        { client_id: toObjectId(req.user.userId) }
+      ]
     });
 
     if (!pet) {
       await client.close();
       return res.status(404).json({
         success: false,
-        message: 'Pet not found'
+        message: 'Pet not found or access denied'
       });
     }
 
     let matchQuery = {
-      petId: new ObjectId(petId),
-      ownerId: new ObjectId(req.user.userId),
+      petId: petObjectId,
+      $or: [
+        { client_id: req.user.userId },
+        { client_id: toObjectId(req.user.userId) }
+      ],
       isActive: true
     };
 
@@ -618,7 +757,10 @@ router.get('/stats', authenticateToken, async (req, res) => {
     const stats = await dailyLogsCollection.aggregate([
       {
         $match: {
-          ownerId: new ObjectId(req.user.userId),
+          $or: [
+            { client_id: req.user.userId },
+            { client_id: toObjectId(req.user.userId) }
+          ],
           isActive: true
         }
       },
@@ -633,7 +775,10 @@ router.get('/stats', authenticateToken, async (req, res) => {
     ]).toArray();
 
     const totalLogs = await dailyLogsCollection.countDocuments({
-      ownerId: new ObjectId(req.user.userId),
+      $or: [
+        { client_id: req.user.userId },
+        { client_id: toObjectId(req.user.userId) }
+      ],
       isActive: true
     });
 
@@ -643,7 +788,10 @@ router.get('/stats', authenticateToken, async (req, res) => {
     const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
 
     const todayLogs = await dailyLogsCollection.countDocuments({
-      ownerId: new ObjectId(req.user.userId),
+      $or: [
+        { client_id: req.user.userId },
+        { client_id: toObjectId(req.user.userId) }
+      ],
       isActive: true,
       activityTime: {
         $gte: startOfToday,

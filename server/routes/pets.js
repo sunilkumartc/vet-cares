@@ -1,14 +1,13 @@
 import express from 'express';
 import { MongoClient, ObjectId } from 'mongodb';
 import multer from 'multer';
-import { uploadToS3, deleteFromS3, getSignedUrl } from '../config/aws.js';
-// routes/pets.js
 import jwt from 'jsonwebtoken';
-
+import path from 'path';
+import { uploadToS3, deleteFromS3, getSignedUrl } from '../config/aws.js';
 
 const router = express.Router();
 
-// Configure multer for pet photo uploads
+// Configure multer for pet photo uploads (same as reference)
 const storage = multer.memoryStorage();
 const upload = multer({
   storage,
@@ -25,11 +24,9 @@ const upload = multer({
 });
 
 // Middleware to verify JWT token
-// routes/pets.js or any protected route
 const authenticateToken = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
-    console.log('Auth header received:', authHeader);
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
@@ -39,22 +36,16 @@ const authenticateToken = async (req, res, next) => {
     }
 
     const token = authHeader.split(' ')[1];
-    console.log('Token extracted:', token.substring(0, 20) + '...');
-    console.log('JWT_SECRET available:', !!process.env.JWT_SECRET);
-    console.log('JWT_SECRET length:', process.env.JWT_SECRET?.length);
-    
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log('Token decoded successfully:', decoded);
-    
     req.user = { userId: decoded.userId };
     next();
   } catch (error) {
-    console.error('JWT verification failed:', error.name, error.message);
+    console.error('JWT verification failed:', error);
     
     if (error.name === 'JsonWebTokenError') {
       return res.status(401).json({
         success: false,
-        message: 'Invalid token - JWT verification failed'
+        message: 'Invalid token'
       });
     }
     if (error.name === 'TokenExpiredError') {
@@ -71,25 +62,116 @@ const authenticateToken = async (req, res, next) => {
   }
 };
 
+// FIXED: Optional JWT Authentication Middleware
+const optionalAuthenticateToken = (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
 
-// GET /api/petss - Get all pets for authenticated user
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const token = authHeader.split(" ")[1];
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        req.user = { userId: decoded.userId };
+      } catch (error) {
+        console.warn("Invalid or expired token, continuing without user...");
+        req.user = null;
+      }
+    } else {
+      req.user = null;
+    }
+
+    next();
+  } catch (error) {
+    console.error("Token check error:", error);
+    req.user = null;
+    next();
+  }
+};
+
+// FIXED: Helper function to safely convert to ObjectId
+const toObjectId = (id) => {
+  try {
+    return typeof id === 'string' ? new ObjectId(id) : id;
+  } catch (error) {
+    console.error('Invalid ObjectId:', id);
+    return null;
+  }
+};
+
+// Helper function to process weight value
+const processWeightValue = (weight) => {
+  if (weight === null || weight === undefined || weight === "") {
+    return null;
+  }
+  
+  if (typeof weight === 'number') {
+    return weight;
+  }
+  
+  if (typeof weight === 'string') {
+    const parsed = parseFloat(weight);
+    return isNaN(parsed) ? null : parsed;
+  }
+  
+  return null;
+};
+
+// Helper function to clean empty strings to null
+const cleanEmptyString = (value) => {
+  return value === "" ? null : value;
+};
+
+// FIXED: Helper function to process pet data consistently
+const processPetData = async (pet) => {
+  const processedPet = {
+    _id: pet._id,
+    client_id: pet.client_id || null,
+    tenant_id: pet.tenant_id || null,
+    pet_id: pet.pet_id || null,
+    name: pet.name || '',
+    species: pet.species || '',
+    breed: pet.breed || '',
+    color: cleanEmptyString(pet.color),
+    gender: cleanEmptyString(pet.gender),
+    birth_date: cleanEmptyString(pet.birth_date),
+    weight: processWeightValue(pet.weight),
+    microchip_id: cleanEmptyString(pet.microchip_id),
+    photo_url: cleanEmptyString(pet.photo_url),
+    allergies: cleanEmptyString(pet.allergies),
+    special_notes: cleanEmptyString(pet.special_notes),
+    created_date: pet.created_date || new Date(),
+    updated_date: pet.updated_date || new Date()
+  };
+
+  // FIXED: Handle photo URL - since we store full URL, return it directly
+  processedPet.photo = processedPet.photo_url;
+
+  return processedPet;
+};
+
+// GET /api/pets - Get all pets for authenticated user
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const { page = 1, limit = 10, species, needsVaccination } = req.query;
+    const { page = 1, limit = 10, species } = req.query;
     
     const client = new MongoClient(process.env.MONGODB_URI);
     await client.connect();
     const db = client.db('vet-cares');
     const petsCollection = db.collection('pets');
 
-    const query = { 
-      ownerId: req.user.userId,
-      isActive: true 
+    // FIXED: Filter by authenticated user with flexible matching
+    const query = {
+      $or: [
+        { client_id: req.user.userId },
+        { client_id: toObjectId(req.user.userId) }
+      ]
     };
-    // Add filters
+    
+    // Add species filter if specified
     if (species) {
       query.species = { $regex: species, $options: 'i' };
     }
+    
     // Pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
     
@@ -97,22 +179,12 @@ router.get('/', authenticateToken, async (req, res) => {
       .find(query)
       .skip(skip)
       .limit(parseInt(limit))
-      .sort({ createdAt: -1 })
+      .sort({ created_date: -1 })
       .toArray();
 
-    // Generate signed URLs for pet photos
-    const petsWithPhotos = await Promise.all(
-      pets.map(async (pet) => {
-        if (pet.photoMetadata && pet.photoMetadata.s3Key) {
-          try {
-            pet.photo = await getSignedUrl(pet.photoMetadata.s3Key, 3600);
-          } catch (error) {
-            console.warn('Failed to generate signed URL for pet photo:', error);
-            pet.photo = null;
-          }
-        }
-        return pet;
-      })
+    // Process pets to handle photo URLs and weight
+    const processedPets = await Promise.all(
+      pets.map(async (pet) => await processPetData(pet))
     );
 
     const total = await petsCollection.countDocuments(query);
@@ -122,7 +194,7 @@ router.get('/', authenticateToken, async (req, res) => {
     res.json({
       success: true,
       data: {
-        pets: petsWithPhotos,
+        pets: processedPets,
         pagination: {
           page: parseInt(page),
           limit: parseInt(limit),
@@ -141,21 +213,23 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
-// POST /api/pets/create - Create new pet
+// POST /api/pets - Create new pet
 router.post('/create', authenticateToken, async (req, res) => {
   try {
     const {
+      tenant_id,
+      pet_id,
       name,
       species,
       breed,
-      age,
-      weight,
-      gender,
       color,
-      microchip,
-      diet,
-      behavior,
-      tags
+      gender,
+      birth_date,
+      weight,
+      microchip_id,
+      photo_url,
+      allergies,
+      special_notes
     } = req.body;
 
     if (!name || !species || !breed) {
@@ -171,42 +245,36 @@ router.post('/create', authenticateToken, async (req, res) => {
     const petsCollection = db.collection('pets');
 
     const newPet = {
-      ownerId: req.user.userId,
+      client_id: req.user.userId, // Store as string initially
+      tenant_id: tenant_id || null,
+      pet_id: pet_id || null,
       name: name.trim(),
       species: species.trim(),
       breed: breed.trim(),
-      age: age || { years: 0, months: 0 },
-      weight: weight || null,
-      gender: gender || null,
-      color: color || null,
-      photo: null,
-      photoMetadata: null,
-      microchip: microchip || null,
-      health: {
-        status: 'healthy',
-        allergies: [],
-        conditions: [],
-        medications: []
-      },
-      vaccinations: [],
-      diet: diet || null,
-      behavior: behavior || null,
-      isActive: true,
-      tags: tags || [],
-      createdAt: new Date(),
-      updatedAt: new Date()
+      color: cleanEmptyString(color),
+      gender: cleanEmptyString(gender),
+      birth_date: cleanEmptyString(birth_date),
+      weight: processWeightValue(weight),
+      microchip_id: cleanEmptyString(microchip_id),
+      photo_url: cleanEmptyString(photo_url),
+      allergies: cleanEmptyString(allergies),
+      special_notes: cleanEmptyString(special_notes),
+      created_date: new Date(),
+      updated_date: new Date()
     };
 
     const result = await petsCollection.insertOne(newPet);
-    
     const createdPet = await petsCollection.findOne({ _id: result.insertedId });
+
+    // Process the created pet
+    const processedPet = await processPetData(createdPet);
 
     await client.close();
 
     res.status(201).json({
       success: true,
       message: 'Pet created successfully',
-      data: createdPet
+      data: processedPet
     });
 
   } catch (error) {
@@ -218,10 +286,18 @@ router.post('/create', authenticateToken, async (req, res) => {
   }
 });
 
-// GET /api/pets/:petId - Get specific pet
+// GET /api/pets/:petId - Get specific pet with photo
 router.get('/:petId', authenticateToken, async (req, res) => {
   try {
     const { petId } = req.params;
+
+    const petObjectId = toObjectId(petId);
+    if (!petObjectId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid pet ID format'
+      });
+    }
 
     const client = new MongoClient(process.env.MONGODB_URI);
     await client.connect();
@@ -229,34 +305,33 @@ router.get('/:petId', authenticateToken, async (req, res) => {
     const petsCollection = db.collection('pets');
 
     const pet = await petsCollection.findOne({
-      _id: new ObjectId(petId),
-      ownerId: req.user.userId,
-      isActive: true
+      _id: petObjectId,
+      $or: [
+        { client_id: req.user.userId },
+        { client_id: toObjectId(req.user.userId) }
+      ]
     });
 
     if (!pet) {
       await client.close();
       return res.status(404).json({
         success: false,
-        message: 'Pet not found'
+        message: 'Pet not found or access denied'
       });
     }
 
-    // Generate signed URL for pet photo
-    if (pet.photoMetadata && pet.photoMetadata.s3Key) {
-      try {
-        pet.photo = await getSignedUrl(pet.photoMetadata.s3Key, 3600);
-      } catch (error) {
-        console.warn('Failed to generate signed URL for pet photo:', error);
-        pet.photo = null;
-      }
-    }
+    console.log('Retrieved pet photo_url from DB:', pet.photo_url);
+
+    // Process the pet data including photo URL generation
+    const processedPet = await processPetData(pet);
+    
+    console.log('Processed pet photo:', processedPet.photo);
 
     await client.close();
 
     res.json({
       success: true,
-      data: pet
+      data: processedPet
     });
 
   } catch (error) {
@@ -268,30 +343,228 @@ router.get('/:petId', authenticateToken, async (req, res) => {
   }
 });
 
+// GET /api/document/petdoc/:petId - Get documents for specific pet with optional authentication
+router.get('/petdoc/:petId', optionalAuthenticateToken, async (req, res) => {
+  try {
+    const { petId } = req.params;
+    const { page = 1, limit = 20, type } = req.query;
+
+    const client = new MongoClient(process.env.MONGODB_URI);
+    await client.connect();
+    const db = client.db('vet-cares');
+    const documentsCollection = db.collection('documents');
+    const petsCollection = db.collection('pets');
+
+    // FIXED: Safe ObjectId conversion
+    let petObjectId;
+    try {
+      petObjectId = new ObjectId(petId);
+    } catch (error) {
+      await client.close();
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid pet ID format'
+      });
+    }
+
+    // FIXED: Build pet query with flexible client_id matching
+    const petQuery = {
+      _id: petObjectId
+      // Removed isActive check to allow fetching documents for all pets
+    };
+
+    // Only filter by owner if user is authenticated
+    if (req.user) {
+      petQuery.$or = [
+        { client_id: req.user.userId }, // String match
+        { client_id: new ObjectId(req.user.userId) } // ObjectId match
+      ];
+    }
+
+    const pet = await petsCollection.findOne(petQuery);
+
+    if (!pet) {
+      await client.close();
+      return res.status(404).json({
+        success: false,
+        message: 'Pet not found or access denied'
+      });
+    }
+
+    // FIXED: Build documents query with proper ObjectId handling
+    const docQuery = {
+      petId: petObjectId,
+      isActive: true
+    };
+
+    // Only filter by owner if user is authenticated
+    if (req.user) {
+      docQuery.$or = [
+        { client_id: req.user.userId }, // String match
+        { client_id: new ObjectId(req.user.userId) } // ObjectId match
+      ];
+    }
+
+    if (type) {
+      docQuery.type = type;
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // FIXED: Improved aggregation pipeline with proper null handling
+    const documents = await documentsCollection.aggregate([
+      { $match: docQuery },
+      {
+        $lookup: {
+          from: 'pets',
+          localField: 'petId',
+          foreignField: '_id',
+          as: 'petDetails'
+        }
+      },
+      {
+        $lookup: {
+          from: 'users', // FIXED: Changed from 'clients' to 'users' (adjust as needed)
+          localField: 'client_id',
+          foreignField: '_id',
+          as: 'ownerDetails'
+        }
+      },
+      {
+        $addFields: {
+          // FIXED: Use $cond to handle empty arrays properly
+          pet: {
+            $cond: {
+              if: { $gt: [{ $size: '$petDetails' }, 0] },
+              then: {
+                _id: { $arrayElemAt: ['$petDetails._id', 0] },
+                name: { $arrayElemAt: ['$petDetails.name', 0] },
+                species: { $arrayElemAt: ['$petDetails.species', 0] },
+                breed: { $arrayElemAt: ['$petDetails.breed', 0] }
+              },
+              else: null
+            }
+          },
+          owner: {
+            $cond: {
+              if: { $gt: [{ $size: '$ownerDetails' }, 0] },
+              then: {
+                _id: { $arrayElemAt: ['$ownerDetails._id', 0] },
+                name: { $arrayElemAt: ['$ownerDetails.first_name', 0] },
+                email: { $arrayElemAt: ['$ownerDetails.email', 0] },
+                phone: { $arrayElemAt: ['$ownerDetails.phone', 0] }
+              },
+              else: null
+            }
+          }
+        }
+      },
+      { $project: { petDetails: 0, ownerDetails: 0 } },
+      { $sort: { createdAt: -1 } },
+      { $skip: skip },
+      { $limit: parseInt(limit) }
+    ]).toArray();
+
+    // Add virtual fields and generate signed URLs
+    const documentsWithUrls = await Promise.all(
+      documents.map(async (doc) => {
+        // Add virtual fields
+        doc.fileSizeFormatted = formatFileSize(doc.file.size);
+        doc.age = calculateAge(doc.createdAt);
+        doc.expiryStatus = getExpiryStatus(doc.metadata?.expiryDate);
+
+        // Generate signed URL for document access
+        if (doc.file && doc.file.s3Key) {
+          try {
+            doc.file.url = await getSignedUrl(doc.file.s3Key, 3600);
+          } catch (error) {
+            console.warn('Failed to generate signed URL for document:', error);
+            doc.file.url = null;
+          }
+        }
+        return doc;
+      })
+    );
+
+    const total = await documentsCollection.countDocuments(docQuery);
+
+    await client.close();
+
+    res.json({
+      success: true,
+      data: {
+        documents: documentsWithUrls,
+        pet: {
+          _id: pet._id,
+          name: pet.name,
+          species: pet.species,
+          breed: pet.breed
+        },
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total,
+          pages: Math.ceil(total / parseInt(limit))
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Get pet documents error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while retrieving pet documents'
+    });
+  }
+});
+
 // PUT /api/pets/:petId - Update pet
 router.put('/:petId', authenticateToken, async (req, res) => {
   try {
     const { petId } = req.params;
     const updateData = { ...req.body };
     
+    // FIXED: Safe ObjectId conversion
+    const petObjectId = toObjectId(petId);
+    if (!petObjectId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid pet ID format'
+      });
+    }
+    
     // Remove fields that shouldn't be updated directly
     delete updateData._id;
-    delete updateData.ownerId;
-    delete updateData.createdAt;
-    delete updateData.photoMetadata;
+    delete updateData.client_id;
+    delete updateData.created_date;
     
-    updateData.updatedAt = new Date();
+    // Process weight if it's being updated
+    if (updateData.weight !== undefined) {
+      updateData.weight = processWeightValue(updateData.weight);
+    }
+
+    // Clean empty strings
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] === "") {
+        updateData[key] = null;
+      }
+    });
+    
+    updateData.updated_date = new Date();
 
     const client = new MongoClient(process.env.MONGODB_URI);
     await client.connect();
     const db = client.db('vet-cares');
     const petsCollection = db.collection('pets');
 
+    // FIXED: Verify ownership before update
     const result = await petsCollection.updateOne(
-      {
-        _id: new ObjectId(petId),
-        ownerId: req.user.userId,
-        isActive: true
+      { 
+        _id: petObjectId,
+        $or: [
+          { client_id: req.user.userId },
+          { client_id: toObjectId(req.user.userId) }
+        ]
       },
       { $set: updateData }
     );
@@ -300,28 +573,19 @@ router.put('/:petId', authenticateToken, async (req, res) => {
       await client.close();
       return res.status(404).json({
         success: false,
-        message: 'Pet not found'
+        message: 'Pet not found or access denied'
       });
     }
 
-    const updatedPet = await petsCollection.findOne({ _id: new ObjectId(petId) });
-
-    // Generate signed URL for pet photo
-    if (updatedPet.photoMetadata && updatedPet.photoMetadata.s3Key) {
-      try {
-        updatedPet.photo = await getSignedUrl(updatedPet.photoMetadata.s3Key, 3600);
-      } catch (error) {
-        console.warn('Failed to generate signed URL for pet photo:', error);
-        updatedPet.photo = null;
-      }
-    }
+    const updatedPet = await petsCollection.findOne({ _id: petObjectId });
+    const processedPet = await processPetData(updatedPet);
 
     await client.close();
 
     res.json({
       success: true,
       message: 'Pet updated successfully',
-      data: updatedPet
+      data: processedPet
     });
 
   } catch (error) {
@@ -333,54 +597,58 @@ router.put('/:petId', authenticateToken, async (req, res) => {
   }
 });
 
-// DELETE /api/pets/:petId - Delete pet (soft delete)
+// DELETE /api/pets/:petId - Delete pet
 router.delete('/:petId', authenticateToken, async (req, res) => {
   try {
     const { petId } = req.params;
+
+    // FIXED: Safe ObjectId conversion
+    const petObjectId = toObjectId(petId);
+    if (!petObjectId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid pet ID format'
+      });
+    }
 
     const client = new MongoClient(process.env.MONGODB_URI);
     await client.connect();
     const db = client.db('vet-cares');
     const petsCollection = db.collection('pets');
 
-    // Get pet to delete photo from S3
+    // FIXED: Verify ownership before deletion
     const pet = await petsCollection.findOne({
-      _id: new ObjectId(petId),
-      ownerId: req.user.userId
+      _id: petObjectId,
+      $or: [
+        { client_id: req.user.userId },
+        { client_id: toObjectId(req.user.userId) }
+      ]
     });
 
     if (!pet) {
       await client.close();
       return res.status(404).json({
         success: false,
-        message: 'Pet not found'
+        message: 'Pet not found or access denied'
       });
     }
 
-    // Delete photo from S3 if exists
-    if (pet.photoMetadata && pet.photoMetadata.s3Key) {
+    // FIXED: Delete photo from S3 if exists - extract key from URL
+    if (pet.photo_url && pet.photo_url.includes('amazonaws.com')) {
       try {
-        await deleteFromS3(pet.photoMetadata.s3Key);
+        // Extract S3 key from full URL (similar to client avatar code)
+        const s3Key = pet.photo_url.split('/').slice(-2).join('/');
+        await deleteFromS3(s3Key);
         console.log('Pet photo deleted from S3');
       } catch (deleteError) {
         console.warn('Failed to delete pet photo from S3:', deleteError);
       }
     }
 
-    // Soft delete the pet
-    const result = await petsCollection.updateOne(
-      {
-        _id: new ObjectId(petId),
-        ownerId: req.user.userId
-      },
-      {
-        $set: {
-          isActive: false,
-          deletedAt: new Date(),
-          updatedAt: new Date()
-        }
-      }
-    );
+    // Delete the pet document
+    const result = await petsCollection.deleteOne({
+      _id: petObjectId
+    });
 
     await client.close();
 
@@ -398,15 +666,70 @@ router.delete('/:petId', authenticateToken, async (req, res) => {
   }
 });
 
-// POST /api/pets/:petId/upload-photo - Upload pet photo
-router.post('/:petId/upload-photo', authenticateToken, upload.single('photo'), async (req, res) => {
+// FIXED: POST /api/pets/upload-ph - General upload (stores full S3 URL)
+router.post('/upload-ph', authenticateToken, upload.single('photo'), async (req, res) => {
   try {
-    const { petId } = req.params;
+    console.log('General pet photo upload request received');
+    console.log('File:', req.file);
 
     if (!req.file) {
       return res.status(400).json({
         success: false,
-        message: 'No photo file provided'
+        message: 'No file uploaded'
+      });
+    }
+
+    // Upload photo to S3
+    const s3Result = await uploadToS3(req.file, 'pet-photos');
+    console.log('Pet photo uploaded to S3:', s3Result);
+
+    res.json({
+      success: true,
+      message: 'Pet photo uploaded successfully',
+      data: {
+        photoUrl: s3Result.url, // Return full URL for immediate use
+        s3Key: s3Result.key,
+        originalUrl: s3Result.url
+      }
+    });
+  } catch (error) {
+    console.error('Upload pet photo error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while uploading photo',
+      error: error.message
+    });
+  }
+});
+
+// CRITICAL FIX: POST /api/pets/:petId/upload-photo - Store full S3 URL in database
+router.post('/:petId/upload-photo', authenticateToken, upload.single('photo'), async (req, res) => {
+  try {
+    console.log('Upload pet photo request received');
+    console.log('File:', req.file);
+    console.log('Pet ID:', req.params.petId);
+
+    const { petId } = req.params;
+
+    // FIXED: Validate ObjectId format
+    if (!ObjectId.isValid(petId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid pet ID format'
+      });
+    }
+
+    if (!ObjectId.isValid(req.user.userId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid user ID format'
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No file uploaded'
       });
     }
 
@@ -415,11 +738,13 @@ router.post('/:petId/upload-photo', authenticateToken, upload.single('photo'), a
     const db = client.db('vet-cares');
     const petsCollection = db.collection('pets');
 
-    // Check if pet exists and belongs to user
-    const pet = await petsCollection.findOne({
+    // FIXED: Proper ownership verification
+    const pet = await petsCollection.findOne({ 
       _id: new ObjectId(petId),
-      ownerId: req.user.userId,
-      isActive: true
+      $or: [
+        { client_id: req.user.userId },
+        { client_id: new ObjectId(req.user.userId) }
+      ]
     });
 
     if (!pet) {
@@ -430,55 +755,76 @@ router.post('/:petId/upload-photo', authenticateToken, upload.single('photo'), a
       });
     }
 
-    // Delete old photo from S3 if exists
-    if (pet.photoMetadata && pet.photoMetadata.s3Key) {
+    // FIXED: Delete old photo from S3 if it exists - extract key from URL
+    if (pet.photo_url && pet.photo_url.includes('amazonaws.com')) {
       try {
-        await deleteFromS3(pet.photoMetadata.s3Key);
-        console.log('Old pet photo deleted from S3');
+        // Extract S3 key from full URL (same pattern as client avatar code)
+        const oldKey = pet.photo_url.split('/').slice(-2).join('/');
+        await deleteFromS3(oldKey);
+        console.log('Old pet photo deleted from S3:', oldKey);
       } catch (deleteError) {
-        console.warn('Failed to delete old pet photo from S3:', deleteError);
+        console.error('Error deleting old pet photo:', deleteError);
       }
     }
 
-    // Upload new photo to S3
+    // FIXED: Upload new photo to S3
     const s3Result = await uploadToS3(req.file, 'pet-photos');
+    console.log('Pet photo uploaded to S3:', s3Result);
 
-    // Update pet with new photo metadata
-    const photoMetadata = {
-      s3Key: s3Result.key,
-      s3Url: s3Result.url,
-      originalName: req.file.originalname,
-      size: req.file.size,
-      mimeType: req.file.mimetype,
-      uploadedAt: new Date()
-    };
-
-    await petsCollection.updateOne(
+    // CRITICAL FIX: Store full S3 URL in database (same as client avatar pattern)
+    const updateResult = await petsCollection.updateOne(
       { _id: new ObjectId(petId) },
-      {
-        $set: {
-          photoMetadata: photoMetadata,
-          updatedAt: new Date()
-        }
+      { 
+        $set: { 
+          photo_url: s3Result.url, // Store FULL S3 URL, not key
+          updated_date: new Date()
+        } 
       }
     );
 
-    // Generate signed URL for immediate use
-    const signedUrl = await getSignedUrl(s3Result.key, 3600);
+    console.log('Database update result:', {
+      acknowledged: updateResult.acknowledged,
+      matchedCount: updateResult.matchedCount,
+      modifiedCount: updateResult.modifiedCount
+    });
+
+    if (updateResult.matchedCount === 0) {
+      await client.close();
+      return res.status(404).json({
+        success: false,
+        message: 'Failed to update pet photo in database'
+      });
+    }
+
+    // Get updated pet
+    const updatedPet = await petsCollection.findOne({ _id: new ObjectId(petId) });
 
     await client.close();
 
     res.json({
       success: true,
       message: 'Pet photo uploaded successfully',
-      data: {
-        photoUrl: signedUrl,
-        s3Key: s3Result.key
+      data: { 
+        photoUrl: s3Result.url, // Return full URL
+        s3Key: s3Result.key,
+        pet: updatedPet,
+        dbUpdated: updateResult.modifiedCount > 0
       }
     });
-
   } catch (error) {
     console.error('Upload pet photo error:', error);
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        success: false,
+        message: 'File too large. Maximum size is 5MB'
+      });
+    }
+    if (error.message === 'Only image files are allowed') {
+      return res.status(400).json({
+        success: false,
+        message: 'Only image files are allowed'
+      });
+    }
     res.status(500).json({
       success: false,
       message: 'Server error while uploading photo'
@@ -486,10 +832,53 @@ router.post('/:petId/upload-photo', authenticateToken, upload.single('photo'), a
   }
 });
 
-// DELETE /api/pets/:petId/photo - Delete pet photo
+// DEBUG: GET /api/pets/:petId/debug - Debug pet data
+router.get('/:petId/debug', authenticateToken, async (req, res) => {
+  try {
+    const { petId } = req.params;
+    
+    const client = new MongoClient(process.env.MONGODB_URI);
+    await client.connect();
+    const db = client.db('vet-cares');
+    const petsCollection = db.collection('pets');
+
+    const petObjectId = new ObjectId(petId);
+    const pet = await petsCollection.findOne({ _id: petObjectId });
+    
+    await client.close();
+
+    res.json({
+      success: true,
+      data: {
+        petId: petId,
+        petObjectId: petObjectId,
+        userId: req.user.userId,
+        userObjectId: toObjectId(req.user.userId),
+        pet: pet,
+        petFound: !!pet,
+        photoUrl: pet?.photo_url,
+        clientIdMatch: pet?.client_id === req.user.userId,
+        clientIdObjectIdMatch: pet?.client_id?.toString() === req.user.userId
+      }
+    });
+
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// FIXED: DELETE /api/pets/:petId/photo - Delete pet photo
 router.delete('/:petId/photo', authenticateToken, async (req, res) => {
   try {
     const { petId } = req.params;
+
+    // FIXED: Validate ObjectId format
+    if (!ObjectId.isValid(petId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid pet ID format'
+      });
+    }
 
     const client = new MongoClient(process.env.MONGODB_URI);
     await client.connect();
@@ -498,8 +887,10 @@ router.delete('/:petId/photo', authenticateToken, async (req, res) => {
 
     const pet = await petsCollection.findOne({
       _id: new ObjectId(petId),
-      ownerId: req.user.userId,
-      isActive: true
+      $or: [
+        { client_id: req.user.userId },
+        { client_id: new ObjectId(req.user.userId) }
+      ]
     });
 
     if (!pet) {
@@ -510,239 +901,42 @@ router.delete('/:petId/photo', authenticateToken, async (req, res) => {
       });
     }
 
-    // Delete photo from S3 if exists
-    if (pet.photoMetadata && pet.photoMetadata.s3Key) {
+    // FIXED: Delete from S3 if it exists - extract key from URL
+    if (pet.photo_url && pet.photo_url.includes('amazonaws.com')) {
       try {
-        await deleteFromS3(pet.photoMetadata.s3Key);
-        console.log('Pet photo deleted from S3');
+        // Extract S3 key from full URL (same pattern as client avatar code)
+        const s3Key = pet.photo_url.split('/').slice(-2).join('/');
+        await deleteFromS3(s3Key);
+        console.log('Pet photo deleted from S3:', s3Key);
       } catch (deleteError) {
-        console.warn('Failed to delete pet photo from S3:', deleteError);
+        console.error('Error deleting pet photo from S3:', deleteError);
       }
     }
 
-    // Remove photo metadata from pet record
+    // Remove photo from pet
     await petsCollection.updateOne(
       { _id: new ObjectId(petId) },
-      {
-        $unset: {
-          photo: 1,
-          photoMetadata: 1
-        },
-        $set: {
-          updatedAt: new Date()
-        }
+      { 
+        $unset: { photo_url: 1 },
+        $set: { updated_date: new Date() }
       }
     );
+
+    // Get updated pet
+    const updatedPet = await petsCollection.findOne({ _id: new ObjectId(petId) });
 
     await client.close();
 
     res.json({
       success: true,
-      message: 'Pet photo deleted successfully'
+      message: 'Pet photo deleted successfully',
+      data: updatedPet
     });
-
   } catch (error) {
     console.error('Delete pet photo error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error while deleting photo'
-    });
-  }
-});
-
-// POST /api/pets/:petId/vaccinations - Add vaccination record
-router.post('/:petId/vaccinations', authenticateToken, async (req, res) => {
-  try {
-    const { petId } = req.params;
-    const { name, date, nextDue, veterinarian, clinic, notes } = req.body;
-
-    if (!name || !date) {
-      return res.status(400).json({
-        success: false,
-        message: 'Vaccination name and date are required'
-      });
-    }
-
-    const client = new MongoClient(process.env.MONGODB_URI);
-    await client.connect();
-    const db = client.db('vet-cares');
-    const petsCollection = db.collection('pets');
-
-    const vaccination = {
-      _id: new ObjectId(),
-      name,
-      date,
-      nextDue: nextDue || null,
-      veterinarian: veterinarian || null,
-      clinic: clinic || null,
-      notes: notes || null,
-      createdAt: new Date()
-    };
-
-    const result = await petsCollection.updateOne(
-      {
-        _id: new ObjectId(petId),
-        ownerId: req.user.userId,
-        isActive: true
-      },
-      {
-        $push: { vaccinations: vaccination },
-        $set: { updatedAt: new Date() }
-      }
-    );
-
-    if (result.matchedCount === 0) {
-      await client.close();
-      return res.status(404).json({
-        success: false,
-        message: 'Pet not found'
-      });
-    }
-
-    await client.close();
-
-    res.status(201).json({
-      success: true,
-      message: 'Vaccination record added successfully',
-      data: vaccination
-    });
-
-  } catch (error) {
-    console.error('Add vaccination error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error while adding vaccination'
-    });
-  }
-});
-
-// POST /api/pets/:petId/health-conditions - Add health condition
-router.post('/:petId/health-conditions', authenticateToken, async (req, res) => {
-  try {
-    const { petId } = req.params;
-    const { condition, diagnosed, status, notes } = req.body;
-
-    if (!condition || !diagnosed) {
-      return res.status(400).json({
-        success: false,
-        message: 'Condition name and diagnosed date are required'
-      });
-    }
-
-    const client = new MongoClient(process.env.MONGODB_URI);
-    await client.connect();
-    const db = client.db('vet-cares');
-    const petsCollection = db.collection('pets');
-
-    const healthCondition = {
-      _id: new ObjectId(),
-      condition,
-      diagnosed,
-      status: status || 'active',
-      notes: notes || null,
-      createdAt: new Date()
-    };
-
-    const result = await petsCollection.updateOne(
-      {
-        _id: new ObjectId(petId),
-        ownerId: req.user.userId,
-        isActive: true
-      },
-      {
-        $push: { 'health.conditions': healthCondition },
-        $set: { updatedAt: new Date() }
-      }
-    );
-
-    if (result.matchedCount === 0) {
-      await client.close();
-      return res.status(404).json({
-        success: false,
-        message: 'Pet not found'
-      });
-    }
-
-    await client.close();
-
-    res.status(201).json({
-      success: true,
-      message: 'Health condition added successfully',
-      data: healthCondition
-    });
-
-  } catch (error) {
-    console.error('Add health condition error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error while adding health condition'
-    });
-  }
-});
-
-// POST /api/pets/:petId/medications - Add medication
-router.post('/:petId/medications', authenticateToken, async (req, res) => {
-  try {
-    const { petId } = req.params;
-    const { name, dosage, frequency, startDate, endDate, notes } = req.body;
-
-    if (!name || !dosage || !frequency || !startDate) {
-      return res.status(400).json({
-        success: false,
-        message: 'Name, dosage, frequency, and start date are required'
-      });
-    }
-
-    const client = new MongoClient(process.env.MONGODB_URI);
-    await client.connect();
-    const db = client.db('vet-cares');
-    const petsCollection = db.collection('pets');
-
-    const medication = {
-      _id: new ObjectId(),
-      name,
-      dosage,
-      frequency,
-      startDate,
-      endDate: endDate || null,
-      isActive: true,
-      notes: notes || null,
-      createdAt: new Date()
-    };
-
-    const result = await petsCollection.updateOne(
-      {
-        _id: new ObjectId(petId),
-        ownerId: req.user.userId,
-        isActive: true
-      },
-      {
-        $push: { 'health.medications': medication },
-        $set: { updatedAt: new Date() }
-      }
-    );
-
-    if (result.matchedCount === 0) {
-      await client.close();
-      return res.status(404).json({
-        success: false,
-        message: 'Pet not found'
-      });
-    }
-
-    await client.close();
-
-    res.status(201).json({
-      success: true,
-      message: 'Medication added successfully',
-      data: medication
-    });
-
-  } catch (error) {
-    console.error('Add medication error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error while adding medication'
     });
   }
 });
@@ -758,10 +952,13 @@ router.get('/species/:species', authenticateToken, async (req, res) => {
     const db = client.db('vet-cares');
     const petsCollection = db.collection('pets');
 
+    // FIXED: Filter by user and species
     const query = {
-      ownerId: req.user.userId,
-      species: { $regex: species, $options: 'i' },
-      isActive: true
+      $or: [
+        { client_id: req.user.userId },
+        { client_id: toObjectId(req.user.userId) }
+      ],
+      species: { $regex: species, $options: 'i' }
     };
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -770,21 +967,12 @@ router.get('/species/:species', authenticateToken, async (req, res) => {
       .find(query)
       .skip(skip)
       .limit(parseInt(limit))
-      .sort({ createdAt: -1 })
+      .sort({ created_date: -1 })
       .toArray();
 
-    // Generate signed URLs for pet photos
-    const petsWithPhotos = await Promise.all(
-      pets.map(async (pet) => {
-        if (pet.photoMetadata && pet.photoMetadata.s3Key) {
-          try {
-            pet.photo = await getSignedUrl(pet.photoMetadata.s3Key, 3600);
-          } catch (error) {
-            pet.photo = null;
-          }
-        }
-        return pet;
-      })
+    // Process pets
+    const processedPets = await Promise.all(
+      pets.map(async (pet) => await processPetData(pet))
     );
 
     const total = await petsCollection.countDocuments(query);
@@ -794,7 +982,7 @@ router.get('/species/:species', authenticateToken, async (req, res) => {
     res.json({
       success: true,
       data: {
-        pets: petsWithPhotos,
+        pets: processedPets,
         pagination: {
           page: parseInt(page),
           limit: parseInt(limit),
@@ -813,60 +1001,49 @@ router.get('/species/:species', authenticateToken, async (req, res) => {
   }
 });
 
-// GET /api/pets/needing-vaccination - Get pets needing vaccination
-router.get('/needing-vaccination', authenticateToken, async (req, res) => {
+// ADDED: GET /api/pets/user/stats - Get user's pet statistics
+router.get('/user/stats', authenticateToken, async (req, res) => {
   try {
     const client = new MongoClient(process.env.MONGODB_URI);
     await client.connect();
     const db = client.db('vet-cares');
     const petsCollection = db.collection('pets');
 
-    const currentDate = new Date();
-    
-    // Find pets where vaccination nextDue date has passed or is coming up
-    const pets = await petsCollection.find({
-      ownerId: req.user.userId,
-      isActive: true,
+    const query = {
       $or: [
-        { 'vaccinations.nextDue': { $lte: currentDate.toISOString() } },
-        { 'vaccinations': { $size: 0 } } // Pets with no vaccinations
+        { client_id: req.user.userId },
+        { client_id: toObjectId(req.user.userId) }
       ]
-    }).toArray();
+    };
 
-    // Generate signed URLs for pet photos
-    const petsWithPhotos = await Promise.all(
-      pets.map(async (pet) => {
-        if (pet.photoMetadata && pet.photoMetadata.s3Key) {
-          try {
-            pet.photo = await getSignedUrl(pet.photoMetadata.s3Key, 3600);
-          } catch (error) {
-            pet.photo = null;
-          }
+    const stats = await petsCollection.aggregate([
+      { $match: query },
+      {
+        $group: {
+          _id: '$species',
+          count: { $sum: 1 }
         }
-        return pet;
-      })
-    );
+      },
+      { $sort: { count: -1 } }
+    ]).toArray();
+
+    const totalPets = await petsCollection.countDocuments(query);
 
     await client.close();
 
     res.json({
       success: true,
       data: {
-        pets: petsWithPhotos,
-        pagination: {
-          page: 1,
-          limit: petsWithPhotos.length,
-          total: petsWithPhotos.length,
-          pages: 1
-        }
+        totalPets,
+        petsBySpecies: stats
       }
     });
 
   } catch (error) {
-    console.error('Get pets needing vaccination error:', error);
+    console.error('Get pet stats error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error while retrieving pets'
+      message: 'Server error while retrieving pet statistics'
     });
   }
 });

@@ -824,13 +824,24 @@ router.delete('/unlink-clinic', authenticateToken, async (req, res) => {
       }
     );
 
+    // ✅ Update all pets of this client -> set tenant_id to null
+    await db.collection('pets').updateMany(
+      { userId: new ObjectId(userId) }, // match pets belonging to this client
+      {
+        $set: {
+          tenant_id: null,
+          updated_at: new Date()
+        }
+      }
+    );
+
     await client.close();
 
-    console.log(`Successfully unlinked client ${userId} from clinic`);
+    console.log(`Successfully unlinked client ${userId} and pets from clinic`);
 
     res.json({
       success: true,
-      message: 'Clinic unlinked successfully'
+      message: 'Clinic unlinked successfully for client and pets'
     });
 
   } catch (error) {
@@ -841,6 +852,7 @@ router.delete('/unlink-clinic', authenticateToken, async (req, res) => {
     });
   }
 });
+
 
 // **FIXED: DELETE /api/mobileclient/avatar**
 router.delete('/avatar', authenticateToken, async (req, res) => {

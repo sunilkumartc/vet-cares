@@ -1,6 +1,7 @@
 import express from 'express';
 import { MongoClient, ObjectId } from 'mongodb';
 import fetch from 'node-fetch';
+import bcrypt from 'bcryptjs';
 
 const router = express.Router();
 
@@ -42,15 +43,40 @@ async function sendWelcomeEmail({ to, name, tenantName, welcomeMessage, bookingU
   }
 }
 
-// POST /api/clients - create client and optionally send welcome mail
 router.post('/', async (req, res) => {
   try {
-    const { first_name, last_name, email, phone, address, sendWelcomeMail, tenant_id } = req.body;
+    const { 
+      name, 
+      last_name, 
+      email, 
+      phone, 
+      address, 
+      sendWelcomeMail, 
+      tenant_id,
+      password,
+      role,
+      avatar,
+      avatarMetadata,
+      isActive,
+      lastLogin,
+      preferences,
+      pushToken,
+      linkedClinic
+    } = req.body;
 
-    // Validate required fields (email & last_name are optional)
-    if (!first_name || !phone || !tenant_id) {
-      return res.status(400).json({ error: 'Missing required fields (first_name, phone, or tenant_id)' });
+    if (!name || !phone) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Missing required fields (name, phone)' 
+      });
     }
+
+    // if (!tenant_id) {
+    //   return res.status(400).json({ 
+    //     success: false,
+    //     message: 'Tenant ID is required' 
+    //   });
+    // }
 
     const client = new MongoClient(process.env.MONGODB_URI);
     await client.connect();
@@ -58,13 +84,63 @@ router.post('/', async (req, res) => {
     const clientsCollection = db.collection('clients');
     const tenantsCollection = db.collection('tenants');
 
-    const newClient = {
-      first_name,
-      last_name: last_name || '',   // Default empty if not provided
-      email: email || '',           // Default empty if not provided
-      phone,
-      address: address || '',
+    // Check for existing phone in same tenant
+    const existingPhone = await clientsCollection.findOne({ 
+      phone, 
       tenant_id,
+      isActive: true 
+    });
+    
+    if (existingPhone) {
+      await client.close();
+      return res.status(400).json({
+        success: false,
+        message: 'Phone number already exists for this clinic'
+      });
+    }
+
+    // Check for existing email in same tenant
+    if (email) {
+      const existingEmail = await clientsCollection.findOne({ 
+        email: email.toLowerCase(), 
+        tenant_id,
+        isActive: true 
+      });
+      
+      if (existingEmail) {
+        await client.close();
+        return res.status(400).json({
+          success: false,
+          message: 'Email already exists for this clinic'
+        });
+      }
+    }
+
+    const plainPassword = password || '123456';
+    const salt = await bcrypt.genSalt(12);
+    const hashedPassword = await bcrypt.hash(plainPassword, salt);
+
+    const newClient = {
+      name,
+      phone,
+      tenant_id, // **CRITICAL: Include tenant_id**
+      first_name: name,              // ✅ duplicate into first_name
+      last_name: last_name || '',
+      email: email ? email.toLowerCase() : '',
+      address: address || '',
+      password: hashedPassword,
+      role: role || 'owner',
+      avatar: avatar || null,
+      avatarMetadata: avatarMetadata || null,
+      isActive: isActive !== undefined ? isActive : true,
+      lastLogin: lastLogin || null,
+      preferences: preferences || {
+        notifications: { email: true, push: true, sms: false },
+        language: 'en',
+        timezone: 'UTC'
+      },
+      pushToken: pushToken || null,
+      linkedClinic: linkedClinic || null,
       status: 'active',
       created_at: new Date(),
       updated_at: new Date(),
@@ -73,11 +149,11 @@ router.post('/', async (req, res) => {
 
     const result = await clientsCollection.insertOne(newClient);
 
-    // Send welcome email only if email exists and sendWelcomeMail is true
     if (sendWelcomeMail && email) {
       let tenantName = 'VetVault';
       let welcomeMessage = '';
       let bookingUrl = '';
+
       try {
         const tenant = await tenantsCollection.findOne({ _id: new ObjectId(tenant_id) });
         if (tenant) {
@@ -90,16 +166,37 @@ router.post('/', async (req, res) => {
       } catch (e) {
         console.warn('Tenant lookup failed:', e);
       }
-      await sendWelcomeEmail({ to: email, name: first_name, tenantName, welcomeMessage, bookingUrl });
+      
+      try {
+        await sendWelcomeEmail({ to: email, name: name, tenantName, welcomeMessage, bookingUrl });
+      } catch (emailError) {
+        console.error('Welcome email failed:', emailError);
+        // Don't fail client creation if email fails
+      }
     }
 
+    // Get created client without password
+    const createdClient = await clientsCollection.findOne(
+      { _id: result.insertedId },
+      { projection: { password: 0 } }
+    );
+
     await client.close();
-    res.json({ success: true, client_id: result.insertedId });
+    
+    res.status(201).json({ 
+      success: true, 
+      message: 'Client created successfully',
+      data: createdClient
+    });
   } catch (error) {
     console.error('Error creating client:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ 
+      success: false,
+      message: error.message 
+    });
   }
 });
+
 
 
 export default router; 

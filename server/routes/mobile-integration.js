@@ -253,6 +253,7 @@ router.get('/clinics/:clinicId/link-requests', async (req, res) => {
 });
 
 // Approve or reject a link request
+// Approve or reject a link request
 router.patch('/clinic-link-requests/:requestId', async (req, res) => {
   try {
     const { requestId } = req.params;
@@ -261,19 +262,19 @@ router.patch('/clinic-link-requests/:requestId', async (req, res) => {
     if (!['approved', 'rejected'].includes(status)) {
       return res.status(400).json({
         success: false,
-        message: 'Status must be either "approved" or "rejected"'
+        message: 'Status must be either "approved" or "rejected"',
       });
     }
 
-    // First, get the link request details to get userId and clinicId
+    // First, get the link request details
     const linkRequest = await db.collection('clinic_link_requests').findOne({
-      _id: new ObjectId(requestId)
+      _id: new ObjectId(requestId),
     });
 
     if (!linkRequest) {
       return res.status(404).json({
         success: false,
-        message: 'Link request not found'
+        message: 'Link request not found',
       });
     }
 
@@ -284,83 +285,106 @@ router.patch('/clinic-link-requests/:requestId', async (req, res) => {
         $set: {
           status,
           responseMessage: responseMessage || '',
-          updatedAt: new Date()
-        }
+          updatedAt: new Date(),
+        },
       }
     );
 
     if (result.matchedCount === 0) {
       return res.status(404).json({
         success: false,
-        message: 'Link request not found'
+        message: 'Link request not found',
       });
     }
 
-    // Update client profile based on approval/rejection
+    // Update client profile + pets tenant_id
     try {
       const clientUpdate = {
-        updated_at: new Date()
+        updated_at: new Date(),
       };
 
       if (status === 'approved') {
-        // Set tenant_id to the approved clinic ID
         clientUpdate.tenant_id = linkRequest.clinicId.toString();
-        console.log(`Setting client ${linkRequest.userId} tenant_id to ${linkRequest.clinicId}`);
-      } else if (status === 'rejected') {
-        // Set tenant_id to null
+        console.log(
+          `Setting client ${linkRequest.userId} tenant_id to ${linkRequest.clinicId}`
+        );
+      } else {
         clientUpdate.tenant_id = null;
-        console.log(`Setting client ${linkRequest.userId} tenant_id to null (rejected)`);
+        console.log(
+          `Setting client ${linkRequest.userId} tenant_id to null (rejected)`
+        );
       }
 
-      // Update the client's profile
+      // Update client profile
       const clientUpdateResult = await db.collection('clients').updateOne(
         { _id: new ObjectId(linkRequest.userId) },
         { $set: clientUpdate }
       );
 
       if (clientUpdateResult.matchedCount > 0) {
-        console.log(`Successfully updated client profile for user ${linkRequest.userId}`);
+        console.log(
+          `Successfully updated client profile for user ${linkRequest.userId}`
+        );
       } else {
         console.warn(`Client not found for user ID: ${linkRequest.userId}`);
       }
 
+      // 🔥 Update all pets of this client as well
+      const petUpdate = {
+        updatedAt: new Date(),
+        tenant_id:
+          status === 'approved'
+            ? linkRequest.clinicId.toString()
+            : null,
+      };
+
+      // Ensure client_id is treated as string (your pets collection stores it as string)
+      const petUpdateResult = await db.collection('pets').updateMany(
+        { client_id: linkRequest.userId.toString() }, // ✅ FIXED: compare as string
+        { $set: petUpdate }
+      );
+
+      console.log(
+        `Updated ${petUpdateResult.modifiedCount} pets for client ${linkRequest.userId}`
+      );
     } catch (clientUpdateError) {
-      console.error('Error updating client profile:', clientUpdateError);
-      // Don't fail the main request if client update fails
+      console.error('Error updating client or pets profile:', clientUpdateError);
+      // Don't fail the main request if client/pets update fails
     }
 
     // Send notification to mobile app user
     try {
       const notificationService = require('../../vetvault-mobile/api/services/notificationService');
-      
-      // Get clinic name for notification
-      const clinic = await db.collection('tenants').findOne({ _id: new ObjectId(clinicId) });
+
+      const clinic = await db
+        .collection('tenants')
+        .findOne({ _id: new ObjectId(linkRequest.clinicId) });
       const clinicName = clinic?.name || 'Clinic';
-      
+
       await notificationService.sendLinkRequestNotification(
-        userId,
+        linkRequest.userId,
         clinicName,
         status,
         responseMessage
       );
     } catch (error) {
       console.error('Error sending notification:', error);
-      // Don't fail the request if notification fails
     }
 
     res.json({
       success: true,
-      message: `Link request ${status} successfully`
+      message: `Link request ${status} successfully`,
     });
-
   } catch (error) {
     console.error('Update link request error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to update link request'
+      message: 'Failed to update link request',
     });
   }
 });
+
+
 
 // Get link request statistics for a clinic
 router.get('/clinics/:clinicId/link-stats', async (req, res) => {
@@ -903,11 +927,22 @@ router.delete('/users/:userId/unlink-clinic', async (req, res) => {
       }
     );
 
-    console.log(`Successfully unlinked client ${userId} from clinic`);
+    // ✅ Update all pets belonging to this client -> set tenant_id to null
+    await db.collection('pets').updateMany(
+      { userId: userId }, // match all pets of this client
+      { 
+        $set: { 
+          tenant_id: null,
+          updated_at: new Date()
+        } 
+      }
+    );
+
+    console.log(`Successfully unlinked client ${userId} and pets from clinic`);
 
     res.json({
       success: true,
-      message: 'Clinic unlinked successfully'
+      message: 'Clinic unlinked successfully for client and pets'
     });
 
   } catch (error) {
@@ -918,4 +953,5 @@ router.delete('/users/:userId/unlink-clinic', async (req, res) => {
     });
   }
 });
-export default router; 
+
+export default router;

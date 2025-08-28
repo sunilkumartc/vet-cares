@@ -8,7 +8,7 @@ import { Users, Save, X, ArrowLeft } from "lucide-react"; // Added ArrowLeft
 
 export default function ClientForm({ client, onSubmit, onCancel }) {
   const [formData, setFormData] = useState({
-    first_name: client?.first_name || "",
+    name: client?.name || "",
     last_name: client?.last_name || "",
     email: client?.email || "",
     phone: client?.phone || "",
@@ -54,11 +54,11 @@ export default function ClientForm({ client, onSubmit, onCancel }) {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="first_name">First Name *</Label>
+              <Label htmlFor="name">First Name *</Label>
               <Input
-                id="first_name"
-                value={formData.first_name}
-                onChange={(e) => handleChange('first_name', e.target.value)}
+                id="name"
+                value={formData.name}
+                onChange={(e) => handleChange('name', e.target.value)}
                 required
               />
             </div>

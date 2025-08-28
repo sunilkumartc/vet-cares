@@ -34,9 +34,10 @@ import mongodbManager from './lib/mongodb.js';
 import mobileIntegrationRoutes from './routes/mobile-integration.js';
 import mobileRoute from './routes/mobile-client.js';
 import petsRoutes from './routes/pets.js';
-// import documentsRoutes from './routes/documents.js';
-// import appointmentsRoutes from './routes/appointments.js';
-// import dailyLogsRoutes from './routes/daily-logs.js';
+ import documentsRoutes from './routes/documents.js';
+import appointmentsRoutes from './routes/appointments.js';
+import dailyLogsRoutes from './routes/daily-logs.js';
+import petHealthRoutes from "./routes/petHealthRoutes.js" // Add this line
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -99,9 +100,10 @@ app.use('/api/medical_records', medicalRecordsRoutes);
 app.use('/api/mobile', mobileIntegrationRoutes);
 app.use('/api/mobileclient',mobileRoute);
 app.use('/api/petss', petsRoutes);
-// app.use('/api/appointments', appointmentsRoutes);
-// app.use('/api/documents', documentsRoutes);
-// app.use('/api/daily-logs', dailyLogsRoutes);
+app.use('/api/appointment', appointmentsRoutes);
+app.use('/api/document', documentsRoutes);
+app.use('/api/daily-logs', dailyLogsRoutes);
+app.use('/api/pethealth', petHealthRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
