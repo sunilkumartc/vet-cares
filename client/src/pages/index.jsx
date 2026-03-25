@@ -159,10 +159,16 @@ function PagesContent() {
                 
                     <Route path="/" element={<Dashboard />} />
                 
+                {/* Add routes for lowercase variants used in App.jsx */}
+                <Route path="/staff-login" element={<StaffLogin />} />
+                <Route path="/stafflogin" element={<StaffLogin />} />
+                <Route path="/login" element={<StaffLogin />} />
                 
                 <Route path="/Dashboard" element={<Dashboard />} />
+                <Route path="/dashboard" element={<Dashboard />} />
                 
                 <Route path="/Clients" element={<Clients />} />
+                <Route path="/clients" element={<Clients />} />
                 
                 <Route path="/Appointments" element={<Appointments />} />
                 
@@ -241,10 +247,15 @@ function PagesContent() {
     );
 }
 
-export default function Pages() {
-    return (
-        <Router>
-            <PagesContent />
-        </Router>
-    );
+export default function Pages({ standalone = false }) {
+    // If standalone is true, wrap in Router. Otherwise, assume we're already inside a Router
+    if (standalone) {
+        return (
+            <Router>
+                <PagesContent />
+            </Router>
+        );
+    }
+    
+    return <PagesContent />;
 }

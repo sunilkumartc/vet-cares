@@ -2,6 +2,7 @@ import './App.css'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import Pages from "@/pages/index.jsx"
 import LandingPage from "@/pages/LandingPage.jsx"
+import StaffLogin from "@/pages/StaffLogin.jsx"
 import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from "@/contexts/ThemeContext"
 import { TenantResolver } from "@/components/TenantResolver"
@@ -23,11 +24,12 @@ function App() {
             <Route path="/features" element={<LandingPage />} />
             <Route path="/about" element={<LandingPage />} />
             <Route path="/contact" element={<LandingPage />} />
-            <Route path="/login" element={<Pages />} />
             <Route path="/signup" element={<LandingPage />} />
-            <Route path="/stafflogin" element={<Pages />} />
-            <Route path="/staff-login" element={<Pages />} />
-            <Route path="*" element={<LandingPage />} />
+            <Route path="/login" element={<StaffLogin />} />
+            <Route path="/stafflogin" element={<StaffLogin />} />
+            <Route path="/staff-login" element={<StaffLogin />} />
+            {/* All other routes handled by Pages component */}
+            <Route path="*" element={<Pages />} />
           </Routes>
           <Toaster />
         </Router>
@@ -39,7 +41,7 @@ function App() {
   return (
     <ThemeProvider>
       <TenantResolver>
-        <Pages />
+        <Pages standalone={true} />
         <Toaster />
       </TenantResolver>
     </ThemeProvider>
