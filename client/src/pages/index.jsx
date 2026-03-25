@@ -159,17 +159,12 @@ function PagesContent() {
                 
                     <Route path="/" element={<Dashboard />} />
                 
-                {/* Lowercase route variants for compatibility */}
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/clients" element={<Clients />} />
-                <Route path="/appointments" element={<Appointments />} />
                 
                 <Route path="/Dashboard" element={<Dashboard />} />
                 
                 <Route path="/Clients" element={<Clients />} />
                 
                 <Route path="/Appointments" element={<Appointments />} />
-                <Route path="/appointments" element={<Appointments />} />
                 
                 <Route path="/Pets" element={<Pets />} />
                 
@@ -246,15 +241,10 @@ function PagesContent() {
     );
 }
 
-export default function Pages({ standalone = false }) {
-    // If standalone is true, wrap in Router. Otherwise, assume we're already inside a Router
-    if (standalone) {
-        return (
-            <Router>
-                <PagesContent />
-            </Router>
-        );
-    }
-    
-    return <PagesContent />;
+export default function Pages() {
+    return (
+        <Router>
+            <PagesContent />
+        </Router>
+    );
 }
